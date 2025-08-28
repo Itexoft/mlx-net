@@ -1,0 +1,26 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. -->
+<!-- If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. -->
+<!-- This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0. -->
+
+<Project>
+    <Target Name="GetTargetPath">
+    </Target>
+
+    <Target Name="CopyNativeLibraries" BeforeTargets="GetCopyToOutputDirectoryItems" DependsOnTargets="RunBuildSh">
+        <ItemGroup>
+            <_MlxNativeAotFiles Include="$(MSBuildProjectDirectory)/$(OutputPath)/**/*"/>
+        </ItemGroup>
+
+        <Error Condition="'@(_MlxNativeAotFiles)' == ''" Text="No files found in $(MSBuildProjectDirectory)/$(OutputPath)."/>
+
+        <Message Importance="High" Text="%(_MlxNativeAotFiles.FullPath)" Condition="'@(_MlxNativeAotFiles)' != ''"/>
+
+        <ItemGroup>
+            <ContentWithTargetPath Include="@(_MlxNativeAotFiles)">
+                <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+                <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+                <TargetPath>%(Filename)%(Extension)</TargetPath>
+            </ContentWithTargetPath>
+        </ItemGroup>
+    </Target>
+</Project>

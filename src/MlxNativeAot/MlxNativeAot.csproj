@@ -1,0 +1,93 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. -->
+<!-- If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. -->
+<!-- This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0. -->
+
+<Project>
+    <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk"/>
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <OutputType>Library</OutputType>
+        <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
+        <PublishAot>true</PublishAot>
+        <SelfContained>true</SelfContained>
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <AssemblyName>MLX.NativeAOT</AssemblyName>
+        <NativeLib>Shared</NativeLib>
+        <RootNamespace>Itexoft.Mlx</RootNamespace>
+        <PackageId>Itexoft.MLX.NativeAOT</PackageId>
+        <Version>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/../../VERSION').Trim())</Version>
+        <Authors>Denis Kudelin</Authors>
+        <Company>Itexoft</Company>
+        <PackageDescription>Native .NET bindings for MLX C, built with .NET NativeAOT for macOS arm64. Produces a shared .dylib for direct interop with MLX C.</PackageDescription>
+        <RepositoryUrl>https://github.com/Itexoft/mlx-net</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://github.com/Itexoft/mlx-net</PackageProjectUrl>
+        <PackageTags>MLX;NativeAOT;macOS;arm64;AppleSilicon;bindings;interop;</PackageTags>
+        <LangVersion>13</LangVersion>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <StripSymbols>false</StripSymbols>
+        <NoBuild>true</NoBuild>
+        <PackageLicenseExpression>MPL-2.0-no-copyleft-exception</PackageLicenseExpression>
+        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+        <DefaultItemExcludes>$(DefaultItemExcludes);build-cache\**</DefaultItemExcludes>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+        <PublishTrimmed>true</PublishTrimmed>
+        <TrimMode>full</TrimMode>
+        <IlcGenerateStackTraceData>false</IlcGenerateStackTraceData>
+        <IlcGenerateCompleteTypeMetadata>false</IlcGenerateCompleteTypeMetadata>
+        <IlcOptimizationPreference>Size</IlcOptimizationPreference>
+        <DebugType>none</DebugType>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+        <IlcGenerateStackTraceData>true</IlcGenerateStackTraceData>
+        <IlcGenerateCompleteTypeMetadata>true</IlcGenerateCompleteTypeMetadata>
+        <TrimMode>partial</TrimMode>
+        <DebugType>full</DebugType>
+        <DebugSymbols>true</DebugSymbols>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="Exists('$(MSBuildProjectDirectory)/README.md')">
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <DirectPInvoke Include="__Internal"/>
+        <None Remove="build-cache\**"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/../../LICENSE.md')">
+        <None Include="../../LICENSE.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/../../README.md')">
+        <None Include="../../README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/../../NOTICE.md')">
+        <None Include="../../NOTICE.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/../../DONATE.md')">
+        <None Include="../../DONATE.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <Target Name="RunBuildSh" Condition="'$(SkipRunBuildSh)'!='true'">
+        <Exec
+                Command="$(MSBuildProjectDirectory)/build.sh"
+                WorkingDirectory="$(MSBuildProjectDirectory)"
+                UseCommandProcessor="false"
+                EnvironmentVariables="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(TargetFramework);RuntimeIdentifier=$(RuntimeIdentifier)"/>
+        <Move SourceFiles="$(NativeBinary)" DestinationFolder="$(OutputPath)" OverwriteReadOnlyFiles="true"/>
+        <RemoveDir Directories="$(NativeOutputPath)" Condition="Exists('$(NativeOutputPath)')"/>
+    </Target>
+    <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk"/>
+
+    <PropertyGroup>
+        <BuildDependsOn>RunBuildSh</BuildDependsOn>
+        <RebuildDependsOn>Clean;Build</RebuildDependsOn>
+    </PropertyGroup>
+</Project>

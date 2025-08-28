@@ -1,0 +1,37 @@
+name: Publish
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: publish-${{ github.repository }}-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  release:
+    needs: ci
+    uses: Itexoft/devops/.github/workflows/publish-release.yml@master
+    with:
+      branch: master
+      run-id: ${{ needs.ci.outputs.run-id }}
+      artifact-name: mlx-net-packages
+      tag-prefix: v
+      generate-notes: false
+    secrets: inherit
+
+  nuget:
+    needs: ci
+    uses: Itexoft/devops/.github/workflows/publish-nuget.yml@master
+    with:
+      branch: master
+      run-id: ${{ needs.ci.outputs.run-id }}
+      artifact-name: mlx-net-packages
+      source: https://api.nuget.org/v3/index.json
+    secrets: inherit

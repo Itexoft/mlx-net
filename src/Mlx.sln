@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MlxNet", "MlxNet\MlxNet.csproj", "{161AAFE0-0C78-4F13-9BDD-0B9057333933}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MlxNativeAot", "MlxNativeAot\MlxNativeAot.csproj", "{1A6FE00E-387F-4769-BB2D-B25DCB1B38C4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MlxNet.Tests", "MlxNet.Tests\MlxNet.Tests.csproj", "{A7740B8E-1D17-4A80-BFB7-ED318D4850C7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{161AAFE0-0C78-4F13-9BDD-0B9057333933}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{161AAFE0-0C78-4F13-9BDD-0B9057333933}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{161AAFE0-0C78-4F13-9BDD-0B9057333933}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{161AAFE0-0C78-4F13-9BDD-0B9057333933}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A6FE00E-387F-4769-BB2D-B25DCB1B38C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A6FE00E-387F-4769-BB2D-B25DCB1B38C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A6FE00E-387F-4769-BB2D-B25DCB1B38C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A6FE00E-387F-4769-BB2D-B25DCB1B38C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7740B8E-1D17-4A80-BFB7-ED318D4850C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7740B8E-1D17-4A80-BFB7-ED318D4850C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7740B8E-1D17-4A80-BFB7-ED318D4850C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7740B8E-1D17-4A80-BFB7-ED318D4850C7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,9 @@
+/mlx-bin/
+*/*/bin
+*/*/obj
+/build/
+/nuget/
+*.DS_Store
+.idea/
+*.user
+src/MlxNativeAot/build-cache/
