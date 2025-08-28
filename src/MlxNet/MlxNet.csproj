@@ -1,0 +1,85 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. -->
+<!-- If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. -->
+<!-- This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <OutputType>Library</OutputType>
+        <AssemblyName>Itexoft.MLX</AssemblyName>
+        <RootNamespace>Itexoft.Mlx</RootNamespace>
+        <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
+        <SelfContained>true</SelfContained>
+        <GenerateDependencyFile>false</GenerateDependencyFile>
+        <LangVersion>13</LangVersion>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <PackageId>Itexoft.MLX</PackageId>
+        <Version>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/../../VERSION').Trim())</Version>
+        <Authors>Denis Kudelin</Authors>
+        <Company>Itexoft</Company>
+        <PackageDescription>Managed .NET API layer for MLX interop (no NativeAOT), targeting macOS arm64.</PackageDescription>
+        <RepositoryUrl>https://github.com/Itexoft/mlx-net</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://github.com/Itexoft/mlx-net</PackageProjectUrl>
+        <PackageTags>MLX;Managed;macOS;arm64;AppleSilicon;bindings;interop;</PackageTags>
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <PackageLicenseExpression>MPL-2.0-no-copyleft-exception</PackageLicenseExpression>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+        <GenerateDependencyFile>false</GenerateDependencyFile>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+        <DebugType>none</DebugType>
+        <DebugSymbols>false</DebugSymbols>
+        <StripSymbols>true</StripSymbols>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)'=='Debug'">
+        <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+        <IncludeAllContentForSelfExtract>false</IncludeAllContentForSelfExtract>
+        <DebugType>full</DebugType>
+        <DebugSymbols>true</DebugSymbols>
+        <StripSymbols>false</StripSymbols>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="mlx_logo.png" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+    
+    <PropertyGroup>
+        <PackageIcon>mlx_logo.png</PackageIcon>
+        <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/../../LICENSE.md')">
+        <None Include="../../LICENSE.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/../../README.md')">
+        <None Include="../../README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/../../NOTICE.md')">
+        <None Include="../../NOTICE.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/../../DONATE.md')">
+        <None Include="../../DONATE.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\MlxNativeAot\MlxNativeAot.csproj" PrivateAssets="all"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Remove="bin/**"/>
+        <Compile Remove="bin/**"/>
+        <EmbeddedResource Remove="bin/**"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="$(OutputPath)MLX.NativeAOT.dylib" Pack="true" PackagePath="runtimes/$(RuntimeIdentifier)/native/"/>
+    </ItemGroup>
+</Project>

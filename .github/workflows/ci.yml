@@ -1,0 +1,104 @@
+name: CI
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      run-id:
+        description: ci run id
+        value: ${{ github.run_id }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: macos-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Prepare tools
+        run: |
+          set -euo pipefail
+          if ! command -v cmake >/dev/null 2>&1; then brew update && brew install cmake; fi
+          chmod +x build-mlx-c.sh pack.sh run-tests.sh
+
+      - name: Restore mlx-bin cache
+        id: mlx_bin_restore
+        uses: actions/cache/restore@v4
+        with:
+          path: mlx-bin
+          key: ${{ runner.os }}-mlxbin-${{ hashFiles('VERSION', 'MACOSX.VERSION', 'build-mlx-c.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-mlxbin-
+
+      - name: Build MLX-C
+        if: steps.mlx_bin_restore.outputs.cache-hit != 'true'
+        run: ./build-mlx-c.sh
+
+      - name: Save mlx-bin cache
+        if: steps.mlx_bin_restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: mlx-bin
+          key: ${{ steps.mlx_bin_restore.outputs.cache-primary-key }}
+
+      - name: Pack
+        env:
+          P12_BASE64: ${{ secrets.P12_BASE64 }}
+        run: ./pack.sh
+
+      - name: Locate packages
+        id: pkgs
+        run: |
+          set -euo pipefail
+          files=()
+          while IFS= read -r f; do files+=("$f"); done < <(find "$GITHUB_WORKSPACE/nuget" -type f -name '*.nupkg' -print | sort)
+          if [ "${#files[@]}" -eq 0 ]; then echo "::error::No .nupkg found after pack.sh"; exit 1; fi
+          {
+            echo "paths<<EOF"
+            printf "%s\n" "${files[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlx-net-packages
+          path: ${{ steps.pkgs.outputs.paths }}
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Run tests
+        id: tests
+        run: ./run-tests.sh
+
+      - name: Upload tests artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlx-net-tests
+          path: ${{ github.workspace }}/test-artifacts
+          if-no-files-found: ignore
+          retention-days: 1

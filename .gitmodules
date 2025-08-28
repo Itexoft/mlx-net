@@ -1,0 +1,4 @@
+[submodule "external/mlx-c"]
+	path = external/mlx-c
+	url = https://github.com/ml-explore/mlx-c
+	branch = mlx-v0.26.1
