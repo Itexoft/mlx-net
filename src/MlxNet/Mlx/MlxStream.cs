@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Itexoft.Mlx;
 
-public static unsafe partial class MlxStream
+public static partial class MlxStream
 {
     /// <summary>
     /// Creates a new execution stream on the default device.

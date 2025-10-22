@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Itexoft.Mlx;
 
-public static unsafe partial class MlxString
+public static partial class MlxString
 {
     /// <summary>
     /// Creates a new, empty MLX string object.
@@ -20,7 +20,7 @@ public static unsafe partial class MlxString
     /// </summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_string_new_data", StringMarshalling = StringMarshalling.Utf8)]
     public static partial MlxStringHandle NewData(
-        string str
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string str
     );
 
     /// <summary>

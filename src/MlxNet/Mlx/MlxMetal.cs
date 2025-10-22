@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Itexoft.Mlx;
 
-public static unsafe partial class MlxMetal
+public static partial class MlxMetal
 {
     /// <summary>Returns information about the Metal GPU devices available (e.g. names, features of the GPU).</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_metal_device_info")]

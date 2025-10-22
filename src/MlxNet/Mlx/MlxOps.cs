@@ -642,6 +642,7 @@ public static unsafe partial class MlxOps
         MlxArrayHandle biases,
         int group_size,
         int bits,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string mode,
         MlxStreamHandle s
     );
 
@@ -1425,12 +1426,11 @@ public static unsafe partial class MlxOps
     /// <summary>Quantizes a matrix using the specified bit-width and group size.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_quantize")]
     public static partial int Quantize(
-        out MlxArrayHandle res_0,
-        out MlxArrayHandle res_1,
-        out MlxArrayHandle res_2,
+        out MlxVectorArrayHandle res,
         MlxArrayHandle w,
         int group_size,
         int bits,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string mode,
         MlxStreamHandle s
     );
 
@@ -1445,6 +1445,7 @@ public static unsafe partial class MlxOps
         [MarshalAs(UnmanagedType.I1)] bool transpose,
         int group_size,
         int bits,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string mode,
         MlxStreamHandle s
     );
 
