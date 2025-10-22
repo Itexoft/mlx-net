@@ -24,6 +24,7 @@
         <PackageTags>MLX;Managed;macOS;arm64;AppleSilicon;bindings;interop;</PackageTags>
         <InvariantGlobalization>true</InvariantGlobalization>
         <PackageLicenseExpression>MPL-2.0-no-copyleft-exception</PackageLicenseExpression>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)'=='Release'">
@@ -46,7 +47,7 @@
     <ItemGroup>
         <None Include="mlx_logo.png" Pack="true" PackagePath="\"/>
     </ItemGroup>
-    
+
     <PropertyGroup>
         <PackageIcon>mlx_logo.png</PackageIcon>
         <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>

@@ -52,7 +52,7 @@ public static unsafe partial class MlxLinalg
         out MlxArrayHandle res_0,
         out MlxArrayHandle res_1,
         MlxArrayHandle a,
-        string UPLO,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string UPLO,
         MlxStreamHandle s
     );
 
@@ -69,7 +69,7 @@ public static unsafe partial class MlxLinalg
     public static partial int Eigvalsh(
         out MlxArrayHandle res,
         MlxArrayHandle a,
-        string UPLO,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string UPLO,
         MlxStreamHandle s
     );
 
@@ -115,7 +115,7 @@ public static unsafe partial class MlxLinalg
     public static partial int NormMatrix(
         out MlxArrayHandle res,
         MlxArrayHandle a,
-        string ord,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string ord,
         int* axis,
         nuint axis_num,
         [MarshalAs(UnmanagedType.I1)] bool keepdims,

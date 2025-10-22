@@ -2,3 +2,8 @@
 	path = external/mlx-c
 	url = https://github.com/ml-explore/mlx-c
 	branch = main
+
+[submodule "external/mlx-swift"]
+	path = external/mlx-swift
+	url = https://github.com/ml-explore/mlx-swift
+	branch = main

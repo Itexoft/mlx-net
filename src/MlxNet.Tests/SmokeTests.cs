@@ -23,12 +23,19 @@ public class SmokeTests
     public void CpuStream_New_Works()
     {
         TestHelpers.RequireNativeOrIgnore();
-        var s = TestHelpers.CpuStream();
-        var rc = MlxStream.ToString(out var sh, s);
-        TestHelpers.Ok(rc, "stream tostring");
-        var txt = System.Runtime.InteropServices.Marshal.PtrToStringUTF8(MlxString.Data(sh));
-        MlxString.Free(sh);
-        Assert.That(string.IsNullOrWhiteSpace(txt), Is.False);
+        var stream = TestHelpers.NewCpuStream();
+        try
+        {
+            var rc = MlxStream.ToString(out var sh, stream);
+            TestHelpers.Ok(rc, "stream tostring");
+            var txt = System.Runtime.InteropServices.Marshal.PtrToStringUTF8(MlxString.Data(sh));
+            MlxString.Free(sh);
+            Assert.That(string.IsNullOrWhiteSpace(txt), Is.False);
+        }
+        finally
+        {
+            TestHelpers.ReleaseStream(stream);
+        }
     }
 
     [Test]

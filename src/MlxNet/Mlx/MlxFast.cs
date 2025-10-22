@@ -102,7 +102,7 @@ public static unsafe partial class MlxFast
         StringMarshalling = StringMarshalling.Utf8)]
     public static partial int MetalKernelConfigAddTemplateArgDType(
         MlxFastMetalKernelConfig cls,
-        string name,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string name,
         MlxDType dtype
     );
 
@@ -113,7 +113,7 @@ public static unsafe partial class MlxFast
         StringMarshalling = StringMarshalling.Utf8)]
     public static partial int MetalKernelConfigAddTemplateArgInt(
         MlxFastMetalKernelConfig cls,
-        string name,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string name,
         int value
     );
 
@@ -124,18 +124,18 @@ public static unsafe partial class MlxFast
         StringMarshalling = StringMarshalling.Utf8)]
     public static partial int MetalKernelConfigAddTemplateArgBool(
         MlxFastMetalKernelConfig cls,
-        string name,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string name,
         [MarshalAs(UnmanagedType.I1)] bool value
     );
 
     /// <summary>Compiles a new Metal compute kernel from source or predefined library and returns a handle to it.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_metal_kernel_new", StringMarshalling = StringMarshalling.Utf8)]
     public static partial MlxFastMetalKernel MetalKernelNew(
-        string name,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string name,
         MlxVectorStringHandle input_names,
         MlxVectorStringHandle output_names,
-        string source,
-        string header,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string source,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string header,
         [MarshalAs(UnmanagedType.I1)] bool ensure_row_contiguous,
         [MarshalAs(UnmanagedType.I1)] bool atomic_outputs
     );
@@ -188,7 +188,7 @@ public static unsafe partial class MlxFast
         MlxArrayHandle keys,
         MlxArrayHandle values,
         float scale,
-        string mask_mode,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string mask_mode,
         MlxVectorArrayHandle mask_arrs,
         MlxStreamHandle s
     );

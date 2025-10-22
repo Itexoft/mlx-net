@@ -44,19 +44,25 @@ jobs:
           if ! command -v cmake >/dev/null 2>&1; then brew update && brew install cmake; fi
           chmod +x build-mlx-c.sh pack.sh run-tests.sh
 
+      - name: Record mlx-c revision
+        id: mlx_c_revision
+        run: |
+          set -euo pipefail
+          echo "sha=$(git -C external/mlx-c rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Restore mlx-bin cache
         id: mlx_bin_restore
         uses: actions/cache/restore@v4
         with:
           path: mlx-bin
-          key: ${{ runner.os }}-mlxbin-${{ hashFiles('VERSION', 'MACOSX.VERSION', 'build-mlx-c.sh') }}
+          key: ${{ runner.os }}-mlxbin-${{ steps.mlx_c_revision.outputs.sha }}-${{ hashFiles('MACOSX.VERSION', 'build-mlx-c.sh') }}
           restore-keys: |
             ${{ runner.os }}-mlxbin-
 
       - name: Build MLX-C
         if: steps.mlx_bin_restore.outputs.cache-hit != 'true'
-        run: ./build-mlx-c.sh
-
+        run: ./build-mlx-c.sh --allow-version-mismatch
+      
       - name: Save mlx-bin cache
         if: steps.mlx_bin_restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
@@ -94,11 +100,35 @@ jobs:
         id: tests
         run: ./run-tests.sh
 
-      - name: Upload tests artifacts
+      - name: Upload crash dumps
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlx-net-crash-dumps
+          path: |
+            ${{ github.workspace }}/test-artifacts/**/*.dmp
+            ${{ github.workspace }}/test-artifacts/**/*.dmp.gz
+            ${{ github.workspace }}/test-artifacts/**/*.core
+            ${{ github.workspace }}/test-artifacts/**/*.ips
+            ${{ github.workspace }}/test-artifacts/**/*.crash
+            ${{ github.workspace }}/test-artifacts/**/*.mdmp
+            ${{ github.workspace }}/test-artifacts/**/*.dump
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Upload test artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: mlx-net-tests
-          path: ${{ github.workspace }}/test-artifacts
+          path: |
+            ${{ github.workspace }}/test-artifacts/**
+            !${{ github.workspace }}/test-artifacts/**/*.dmp
+            !${{ github.workspace }}/test-artifacts/**/*.dmp.gz
+            !${{ github.workspace }}/test-artifacts/**/*.core
+            !${{ github.workspace }}/test-artifacts/**/*.ips
+            !${{ github.workspace }}/test-artifacts/**/*.crash
+            !${{ github.workspace }}/test-artifacts/**/*.mdmp
+            !${{ github.workspace }}/test-artifacts/**/*.dump
           if-no-files-found: ignore
           retention-days: 1

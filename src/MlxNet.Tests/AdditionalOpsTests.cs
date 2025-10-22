@@ -12,32 +12,57 @@ public unsafe class AdditionalOpsTests
     public void Arange_Produces_Sequence()
     {
         TestHelpers.RequireNativeOrIgnore();
-        var s = TestHelpers.CpuStream();
-        var rc = MlxOps.Arange(out var a, 0, 5, 1, MlxDType.MLX_FLOAT32, s);
-        TestHelpers.Ok(rc, "arange");
-        TestHelpers.Ok(MlxArray.Eval(a), "eval");
-        var v = TestHelpers.ToFloat32(a);
-        Assert.That(v.Length, Is.EqualTo(5));
-        Assert.That(v[0], Is.EqualTo(0f).Within(1e-6));
-        Assert.That(v[4], Is.EqualTo(4f).Within(1e-6));
-        MlxArray.Free(a);
+        var stream = TestHelpers.NewCpuStream();
+        try
+        {
+            var rc = MlxOps.Arange(out var array, 0, 5, 1, MlxDType.MLX_FLOAT32, stream);
+            TestHelpers.Ok(rc, "arange");
+            TestHelpers.EvalArray(array, "eval arange");
+
+            var values = TestHelpers.ToFloat32(array);
+            Assert.That(values.Length, Is.EqualTo(5));
+            Assert.That(values[0], Is.EqualTo(0f).Within(1e-6));
+            Assert.That(values[4], Is.EqualTo(4f).Within(1e-6));
+
+            MlxArray.Free(array);
+        }
+        finally
+        {
+            TestHelpers.ReleaseStream(stream);
+        }
     }
 
     [Test]
     public void Reshape_Changes_Shape()
     {
         TestHelpers.RequireNativeOrIgnore();
-        var s = TestHelpers.CpuStream();
-        TestHelpers.Ok(MlxOps.Arange(out var a, 0, 6, 1, MlxDType.MLX_FLOAT32, s), "arange");
-        var dims = new[] { 3, 2 };
-        fixed (int* shape = dims)
+        var stream = TestHelpers.NewCpuStream();
+        try
         {
-            TestHelpers.Ok(MlxOps.Reshape(out var r, a, shape, (nuint)dims.Length, s), "reshape");
-            var sh = TestHelpers.ShapeOf(r);
-            Assert.That(sh[0], Is.EqualTo(3));
-            Assert.That(sh[1], Is.EqualTo(2));
-            MlxArray.Free(a);
-            MlxArray.Free(r);
+            TestHelpers.Ok(MlxOps.Arange(out var array, 0, 6, 1, MlxDType.MLX_FLOAT32, stream), "arange");
+            var dims = new[] { 3, 2 };
+
+            var shape = TestHelpers.AllocShape(dims);
+            try
+            {
+                TestHelpers.Ok(MlxOps.Reshape(out var reshaped, array, shape, (nuint)dims.Length, stream), "reshape");
+                TestHelpers.EvalArray(reshaped, "eval reshape");
+
+                var detectedShape = TestHelpers.ShapeOf(reshaped);
+                Assert.That(detectedShape[0], Is.EqualTo(3));
+                Assert.That(detectedShape[1], Is.EqualTo(2));
+
+                MlxArray.Free(array);
+                MlxArray.Free(reshaped);
+            }
+            finally
+            {
+                TestHelpers.FreeShape(shape);
+            }
+        }
+        finally
+        {
+            TestHelpers.ReleaseStream(stream);
         }
     }
 
@@ -45,19 +70,34 @@ public unsafe class AdditionalOpsTests
     public void Exp_On_Zeros_Gives_Ones()
     {
         TestHelpers.RequireNativeOrIgnore();
-        var s = TestHelpers.CpuStream();
-        var zero = MlxArray.NewFloat32(0f);
-        var dims = new[] { 2, 2 };
-        fixed (int* shape = dims)
+        var stream = TestHelpers.NewCpuStream();
+        try
         {
-            TestHelpers.Ok(MlxOps.Full(out var a, shape, (nuint)dims.Length, zero, MlxDType.MLX_FLOAT32, s), "full");
-            TestHelpers.Ok(MlxOps.Exp(out var e, a, s), "exp");
-            TestHelpers.Ok(MlxArray.Eval(e), "eval");
-            var v = TestHelpers.ToFloat32(e);
-            Assert.That(v[0], Is.EqualTo(1f).Within(1e-6));
-            MlxArray.Free(zero);
-            MlxArray.Free(a);
-            MlxArray.Free(e);
+            var zero = MlxArray.NewFloat32(0f);
+            var dims = new[] { 2, 2 };
+
+            var shape = TestHelpers.AllocShape(dims);
+            try
+            {
+                TestHelpers.Ok(MlxOps.Full(out var array, shape, (nuint)dims.Length, zero, MlxDType.MLX_FLOAT32, stream), "full");
+                TestHelpers.Ok(MlxOps.Exp(out var exponentiated, array, stream), "exp");
+                TestHelpers.EvalArray(exponentiated, "eval exp");
+
+                var values = TestHelpers.ToFloat32(exponentiated);
+                Assert.That(values[0], Is.EqualTo(1f).Within(1e-6));
+
+                MlxArray.Free(zero);
+                MlxArray.Free(array);
+                MlxArray.Free(exponentiated);
+            }
+            finally
+            {
+                TestHelpers.FreeShape(shape);
+            }
+        }
+        finally
+        {
+            TestHelpers.ReleaseStream(stream);
         }
     }
 
@@ -65,19 +105,36 @@ public unsafe class AdditionalOpsTests
     public void Argmax_Returns_Index()
     {
         TestHelpers.RequireNativeOrIgnore();
-        var s = TestHelpers.CpuStream();
-        var data = new[] { 1f, 3f, 2f };
-        var shape = new[] { 3 };
-        fixed (float* pd = data)
-        fixed (int* ps = shape)
+        var stream = TestHelpers.NewCpuStream();
+        try
         {
-            var a = MlxArray.NewData(pd, ps, shape.Length, MlxDType.MLX_FLOAT32);
-            TestHelpers.Ok(MlxOps.Argmax(out var idx, a, false, s), "argmax");
-            TestHelpers.Ok(MlxArray.Eval(idx), "eval");
-            var v = TestHelpers.ToInt32(idx);
-            Assert.That(v[0], Is.EqualTo(1));
-            MlxArray.Free(a);
-            MlxArray.Free(idx);
+            var data = new[] { 1f, 3f, 2f };
+            var dims = new[] { 3 };
+
+            fixed (float* source = data)
+            {
+                var shape = TestHelpers.AllocShape(dims);
+                try
+                {
+                    var input = MlxArray.NewData(source, shape, dims.Length, MlxDType.MLX_FLOAT32);
+                    TestHelpers.Ok(MlxOps.Argmax(out var indices, input, false, stream), "argmax");
+                    TestHelpers.EvalArray(indices, "eval argmax");
+
+                    var values = TestHelpers.ToInt32(indices);
+                    Assert.That(values[0], Is.EqualTo(1));
+
+                    MlxArray.Free(input);
+                    MlxArray.Free(indices);
+                }
+                finally
+                {
+                    TestHelpers.FreeShape(shape);
+                }
+            }
+        }
+        finally
+        {
+            TestHelpers.ReleaseStream(stream);
         }
     }
 }

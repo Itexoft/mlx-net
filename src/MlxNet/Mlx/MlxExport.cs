@@ -7,12 +7,12 @@ using System.Runtime.InteropServices;
 
 namespace Itexoft.Mlx;
 
-public static unsafe partial class MlxExport
+public static partial class MlxExport
 {
     /// <summary>Exports a given MLX function or computation graph to an external representation or file (for use in other contexts).</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_export_function", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int Function(
-        string file,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string file,
         MlxClosureHandle fun,
         MlxVectorArrayHandle args,
         [MarshalAs(UnmanagedType.I1)] bool shapeless
@@ -21,7 +21,7 @@ public static unsafe partial class MlxExport
     /// <summary>Similar to _mlx_export_function, but handles functions that take keyword arguments (preserving argument names in the export).</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_export_function_kwargs", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int FunctionKwargs(
-        string file,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string file,
         MlxClosureKwargsHandle fun,
         MlxVectorArrayHandle args,
         MlxMapStringToArrayHandle kwargs,
@@ -31,7 +31,7 @@ public static unsafe partial class MlxExport
     /// <summary>Creates a new function exporter, which can record a function’s operations (for saving or inspecting a computation graph).</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_function_exporter_new", StringMarshalling = StringMarshalling.Utf8)]
     public static partial MlxFunctionExporter FunctionExporterNew(
-        string file,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string file,
         MlxClosureHandle fun,
         [MarshalAs(UnmanagedType.I1)] bool shapeless
     );
@@ -60,7 +60,7 @@ public static unsafe partial class MlxExport
     /// <summary>Loads or creates an MLX function from an imported (saved) format (e.g. from a file containing a serialized function).</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_imported_function_new", StringMarshalling = StringMarshalling.Utf8)]
     public static partial MlxImportedFunction ImportedFunctionNew(
-        string file
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string file
     );
 
     /// <summary>Releases the resources associated with an imported function.</summary>

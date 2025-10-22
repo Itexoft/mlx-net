@@ -13,7 +13,7 @@ public enum MlxDeviceType
     MLX_GPU
 }
 
-public static unsafe partial class MlxDevice
+public static partial class MlxDevice
 {
     /// <summary>
     /// Creates a new device object for the default device type.
