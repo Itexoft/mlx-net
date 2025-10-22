@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Itexoft.Mlx;
 
-public static unsafe partial class MlxIo
+public static partial class MlxIo
 {
     /// <summary>Loads array(s) using a given I/O reader instead of a filename.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_load_reader")]
@@ -21,7 +21,7 @@ public static unsafe partial class MlxIo
     [LibraryImport(Common.Lib, EntryPoint = "mlx_load", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int Load(
         out MlxArrayHandle res,
-        string file,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string file,
         MlxStreamHandle s
     );
 
@@ -39,7 +39,7 @@ public static unsafe partial class MlxIo
     public static partial int LoadSafetensors(
         out MlxMapStringToArrayHandle res_0,
         out MlxMapStringToStringHandle res_1,
-        string file,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string file,
         MlxStreamHandle s
     );
 
@@ -53,7 +53,7 @@ public static unsafe partial class MlxIo
     /// <summary>Saves an array to a binary file in NumPy .npy format.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_save", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int Save(
-        string file,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string file,
         MlxArrayHandle a
     );
 
@@ -68,7 +68,7 @@ public static unsafe partial class MlxIo
     /// <summary>Saves one or more arrays with optional metadata to a file in safetensors format.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_save_safetensors", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int SaveSafetensors(
-        string file,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string file,
         MlxMapStringToArrayHandle param,
         MlxMapStringToStringHandle metadata
     );

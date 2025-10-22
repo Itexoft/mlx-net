@@ -17,6 +17,41 @@ MACOSX_VER_FILE="$SCRIPT_DIR/MACOSX.VERSION"
 VERSION_FILE="$SCRIPT_DIR/VERSION"
 EXPECTED_AR_COUNT=3
 
+is_true() {
+  case "$1" in
+    1|true|TRUE|True|yes|YES|on|ON) return 0;;
+    *) return 1;;
+  esac
+}
+
+normalize_version_base() {
+  local version="${1%%-*}"
+  local major minor patch
+  IFS='.' read -r major minor patch _ <<< "$version"
+  major=${major:-0}
+  minor=${minor:-0}
+  patch=${patch:-0}
+  printf '%s.%s.%s' "$((10#$major))" "$((10#$minor))" "$((10#$patch))"
+}
+
+ALLOW_VERSION_MISMATCH=${ALLOW_VERSION_MISMATCH:-false}
+CMD=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    upgrade)
+      CMD="upgrade"
+      ;;
+    --allow-version-mismatch)
+      ALLOW_VERSION_MISMATCH=true
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      exit 2
+      ;;
+  esac
+  shift
+done
+
 if [ ! -f "$MLX_C_DIR/CMakeLists.txt" ]; then echo "CMakeLists.txt not found in $MLX_C_DIR" >&2; exit 1; fi
 VER="$(sed -nE 's/.*GIT_TAG[[:space:]]+v([0-9]+(\.[0-9]+)*).*/\1/p' "$MLX_C_DIR/CMakeLists.txt" | head -n 1)"
 if [ -z "$VER" ]; then echo "failed to extract MLX version from CMakeLists.txt" >&2; exit 1; fi
@@ -26,8 +61,27 @@ MACOSX_MIN_VER="$(tr -d '[:space:]' < "$MACOSX_VER_FILE")"
 if [ -z "$MACOSX_MIN_VER" ]; then echo "MACOSX.VERSION is empty" >&2; exit 1; fi
 
 if [ ! -f "$VERSION_FILE" ]; then echo "VERSION file not found: $VERSION_FILE; run with 'upgrade' to set" >&2; exit 1; fi
-CUR_VER="$(tr -d '[:space:]' < "$VERSION_FILE")"
-if [ "$CUR_VER" != "$VER" && "${1-}" != "upgrade" ]; then echo "version mismatch: $CUR_VER != $VER; run with 'upgrade' to update" >&2; exit 1; fi
+CUR_VER_FILE="$(tr -d '[:space:]' < "$VERSION_FILE")"
+
+if [ -z "$CUR_VER_FILE" ] && [ "$CMD" != "upgrade" ]; then
+  echo "VERSION file is empty; run with 'upgrade' to set" >&2
+  exit 1
+fi
+
+if [ "$CMD" = "upgrade" ]; then
+  CUR_VER="$VER"
+else
+  if [ "$(normalize_version_base "$CUR_VER_FILE")" != "$(normalize_version_base "$VER")" ]; then
+    if is_true "$ALLOW_VERSION_MISMATCH"; then
+      echo "warning: version mismatch allowed (VERSION=$CUR_VER_FILE, MLX_C=$VER)" >&2
+    else
+      echo "version mismatch: $CUR_VER_FILE != $VER; run with 'upgrade' to update or pass --allow-version-mismatch" >&2
+      exit 1
+    fi
+  fi
+
+  CUR_VER="$CUR_VER_FILE"
+fi
 
 CC="${CC:-/usr/bin/clang}"
 CXX="${CXX:-/usr/bin/clang++}"
@@ -73,4 +127,4 @@ done
 BIN_COUNT="$(find "$BIN_DIR" -type f | wc -l | tr -d '[:space:]')"
 if [ "$BIN_COUNT" -ne $((EXPECTED_AR_COUNT + 1)) ]; then echo "unexpected files count in mlx-bin: $BIN_COUNT" >&2; exit 1; fi
 
-printf '%s\n' "$VER" > "$VERSION_FILE"
+printf '%s\n' "$CUR_VER" > "$VERSION_FILE"

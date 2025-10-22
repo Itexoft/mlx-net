@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Itexoft.Mlx;
 
-public static unsafe partial class MlxVersion
+public static partial class MlxVersion
 {
     /// <summary>
     /// Returns the MLX library version as a string.

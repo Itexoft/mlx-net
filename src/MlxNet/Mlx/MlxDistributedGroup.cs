@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Itexoft.Mlx;
 
-public static unsafe partial class MlxDistributedGroup
+public static partial class MlxDistributedGroup
 {
     /// <summary>Returns the rank (ID) of the current process within a given distributed group.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_distributed_group_rank")]

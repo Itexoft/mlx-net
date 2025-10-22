@@ -4,11 +4,14 @@
 
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <IsPackable>false</IsPackable>
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PackageLicenseExpression>MPL-2.0-no-copyleft-exception</PackageLicenseExpression>
+        <SignAssembly>true</SignAssembly>
+        <AssemblyOriginatorKeyFile>mlx-net-tests.snk</AssemblyOriginatorKeyFile>
+        <PublicSign>true</PublicSign>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1"/>

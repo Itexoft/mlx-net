@@ -334,7 +334,7 @@ public static unsafe partial class MlxVector
     /// </summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_vector_string_new_value", StringMarshalling = StringMarshalling.Utf8)]
     public static partial MlxVectorStringHandle StringNewValue(
-        string val
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string val
     );
 
     /// <summary>
@@ -353,7 +353,7 @@ public static unsafe partial class MlxVector
     [LibraryImport(Common.Lib, EntryPoint = "mlx_vector_string_set_value", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int StringSetValue(
         ref MlxVectorStringHandle vec,
-        string val
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string val
     );
 
     /// <summary>
@@ -372,7 +372,7 @@ public static unsafe partial class MlxVector
     [LibraryImport(Common.Lib, EntryPoint = "mlx_vector_string_append_value", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int StringAppendValue(
         MlxVectorStringHandle vec,
-        string val
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string val
     );
 
     /// <summary>
