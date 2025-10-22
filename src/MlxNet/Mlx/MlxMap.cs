@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Itexoft.Mlx;
 
-public static unsafe partial class MlxMap
+public static partial class MlxMap
 {
     /// <summary>
     /// Creates a new empty map for string keys to array values.
@@ -38,7 +38,7 @@ public static unsafe partial class MlxMap
     [LibraryImport(Common.Lib, EntryPoint = "mlx_map_string_to_array_insert", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int StringToArrayInsert(
         MlxMapStringToArrayHandle map,
-        string key,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key,
         MlxArrayHandle value
     );
 
@@ -49,7 +49,7 @@ public static unsafe partial class MlxMap
     public static partial int StringToArrayGet(
         out MlxArrayHandle value,
         MlxMapStringToArrayHandle map,
-        string key
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key
     );
 
     /// <summary>
@@ -107,8 +107,8 @@ public static unsafe partial class MlxMap
     [LibraryImport(Common.Lib, EntryPoint = "mlx_map_string_to_string_insert", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int StringToStringInsert(
         MlxMapStringToStringHandle map,
-        string key,
-        string value
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string value
     );
 
     /// <summary>
@@ -118,7 +118,7 @@ public static unsafe partial class MlxMap
     public static partial int StringToStringGet(
         out nint value,
         MlxMapStringToStringHandle map,
-        string key
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key
     );
 
     /// <summary>

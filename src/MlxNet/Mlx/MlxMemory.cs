@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Itexoft.Mlx;
 
-public static unsafe partial class MlxMemory
+public static partial class MlxMemory
 {
     /// <summary>
     /// Clears internal caches used by the MLX framework.

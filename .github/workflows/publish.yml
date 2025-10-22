@@ -25,6 +25,7 @@ jobs:
       artifact-name: mlx-net-packages
       tag-prefix: v
       generate-notes: false
+      allow-version-mismatch: true
     secrets: inherit
 
   package:
@@ -34,6 +35,7 @@ jobs:
       branch: master
       run-id: ${{ needs.ci.outputs.run-id }}
       artifact-name: mlx-net-packages
+      allow-version-mismatch: true
     secrets: inherit
 
   nuget:
@@ -44,4 +46,5 @@ jobs:
       run-id: ${{ needs.ci.outputs.run-id }}
       artifact-name: mlx-net-packages
       source: https://api.nuget.org/v3/index.json
+      allow-version-mismatch: true
     secrets: inherit

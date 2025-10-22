@@ -2,13 +2,14 @@
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
-using System.Collections.Generic;
 using System.Text;
 using NUnit.Framework;
 using Itexoft.Mlx;
+using MemStream = TestHelpers.MemStream;
 
 [TestFixture]
 public unsafe class ExampleTests
@@ -19,18 +20,8 @@ public unsafe class ExampleTests
         public fixed byte error[256];
     }
 
-    private struct MemStream
-    {
-        public byte* data;
-        public nuint pos;
-        public nuint size;
-        public byte err;
-        public byte free_data;
-        public nint label;
-    }
-
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe sbyte* MemLabel(void* desc)
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static sbyte* MemLabel(void* desc)
     {
         var ms = (MemStream*)desc;
         if (ms->label == 0)
@@ -39,8 +30,8 @@ public unsafe class ExampleTests
         return (sbyte*)ms->label;
     }
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe byte MemGood(void* desc)
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static byte MemGood(void* desc)
     {
         if (desc == null)
             return 0;
@@ -49,8 +40,8 @@ public unsafe class ExampleTests
         return (byte)(m->err == 0 ? 1 : 0);
     }
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe void MemSeek(void* desc, long off, int whence)
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void MemSeek(void* desc, long off, int whence)
     {
         var m = (MemStream*)desc;
         var size = (long)m->size;
@@ -68,8 +59,8 @@ public unsafe class ExampleTests
             m->pos = (nuint)np;
     }
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe void MemRead(void* desc, sbyte* data, nuint n)
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void MemRead(void* desc, sbyte* data, nuint n)
     {
         var m = (MemStream*)desc;
 
@@ -87,8 +78,8 @@ public unsafe class ExampleTests
         m->pos += n;
     }
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe void MemReadAtOffset(void* desc, sbyte* data, nuint n, nuint off)
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void MemReadAtOffset(void* desc, sbyte* data, nuint n, nuint off)
     {
         var m = (MemStream*)desc;
 
@@ -105,8 +96,8 @@ public unsafe class ExampleTests
             data[i] = (sbyte)m->data[off + i];
     }
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe void MemWrite(void* desc, sbyte* data, nuint n)
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void MemWrite(void* desc, sbyte* data, nuint n)
     {
         var m = (MemStream*)desc;
 
@@ -124,8 +115,8 @@ public unsafe class ExampleTests
         m->pos += n;
     }
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe void MemFree(void* desc)
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void MemFree(void* desc)
     {
         var m = (MemStream*)desc;
         if (m->free_data != 0 && m->data != null)
@@ -133,14 +124,14 @@ public unsafe class ExampleTests
     }
 
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe byte MemIsOpen(void* desc) => (byte)(desc != null ? 1 : 0);
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static byte MemIsOpen(void* desc) => (byte)(desc != null ? 1 : 0);
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe nuint MemTell(void* desc) => ((MemStream*)desc)->pos;
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static nuint MemTell(void* desc) => ((MemStream*)desc)->pos;
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe int IncFunPayload(MlxVectorArrayHandle* vres, MlxVectorArrayHandle input, void* payload)
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static int IncFunPayload(MlxVectorArrayHandle* vres, MlxVectorArrayHandle input, void* payload)
     {
         var s = TestHelpers.CpuStream();
         MlxVector.ArrayGet(out var src, input, 0);
@@ -156,8 +147,8 @@ public unsafe class ExampleTests
         return rc1;
     }
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe int IncFun(MlxArrayHandle* res, MlxArrayHandle input)
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static int IncFun(MlxArrayHandle* res, MlxArrayHandle input)
     {
         var s = TestHelpers.CpuStream();
         var one = MlxArray.NewFloat(1f);
@@ -171,8 +162,8 @@ public unsafe class ExampleTests
         return 0;
     }
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe int IncFunValue(MlxVectorArrayHandle* vres, MlxVectorArrayHandle input, void* payload)
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static int IncFunValue(MlxVectorArrayHandle* vres, MlxVectorArrayHandle input, void* payload)
     {
         var s = TestHelpers.CpuStream();
         MlxVector.ArrayGet(out var src, input, 0);
@@ -188,7 +179,7 @@ public unsafe class ExampleTests
         return rc1;
     }
 
-    private static unsafe byte HasNan(MlxArrayHandle value, MlxStreamHandle s)
+    private static byte HasNan(MlxArrayHandle value, MlxStreamHandle s)
     {
         var rc0 = MlxOps.Isnan(out var tmp, value, s);
 
@@ -209,8 +200,8 @@ public unsafe class ExampleTests
         return flag;
     }
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe int IncFunBogus(MlxVectorArrayHandle* vres, MlxVectorArrayHandle input, void* payloadPtr)
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static int IncFunBogus(MlxVectorArrayHandle* vres, MlxVectorArrayHandle input, void* payloadPtr)
     {
         var payload = (BogusPayload*)payloadPtr;
         var s = TestHelpers.CpuStream();
@@ -240,8 +231,8 @@ public unsafe class ExampleTests
         return rc1;
     }
 
-    [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
-    private static unsafe void ErrorHandler(sbyte* msg, void* data) { }
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void ErrorHandler(sbyte* msg, void* data) { }
 
     [Test]
     public void Divide_And_Arrange_Float32()
@@ -478,110 +469,47 @@ public unsafe class ExampleTests
         var file = Path.GetTempFileName();
         try
         {
-            var s = TestHelpers.CpuStream();
-            var seed = MlxMap.StringToArrayNew();
-            var metaSeed = MlxMap.StringToStringNew();
-            var a = new[] { 1f, 2f, 3f, 4f };
-            var shapeA = new[] { 2, 2 };
-            fixed (float* pa = a)
-            fixed (int* psha = shapeA)
+            TestHelpers.WithStream(stream =>
             {
-                var arrA = MlxArray.NewData(pa, psha, shapeA.Length, MlxDType.MLX_FLOAT32);
-                MlxMap.StringToArrayInsert(seed, "a", arrA);
-                MlxArray.Free(arrA);
-            }
+                var seed = MlxMap.StringToArrayNew();
+                var metaSeed = MlxMap.StringToStringNew();
+                try
+                {
+                    var data = new[] { 1f, 2f, 3f, 4f };
+                    TestHelpers.WithShape(
+                        [2, 2],
+                        (shapePtr, rank) =>
+                        {
+                            var scratch = stackalloc float[data.Length];
+                            TestHelpers.Copy(data, scratch);
+                            var tensor = MlxArray.NewData(scratch, shapePtr, (int)rank, MlxDType.MLX_FLOAT32);
+                            MlxMap.StringToArrayInsert(seed, "a", tensor);
+                            MlxArray.Free(tensor);
+                        });
 
-            var buf = NativeMemory.Alloc(4096);
-            MemStream memW;
-            memW.data = (byte*)buf;
-            memW.pos = 0;
-            memW.size = 4096;
-            memW.err = 0;
-            memW.free_data = 0;
-            memW.label = 0;
-            MlxIoVTable vtW;
-            vtW.is_open = &MemIsOpen;
-            vtW.good = &MemGood;
-            vtW.tell = &MemTell;
-            vtW.seek = &MemSeek;
-            vtW.read = &MemRead;
-            vtW.read_at_offset = &MemReadAtOffset;
-            vtW.write = &MemWrite;
-            vtW.label = &MemLabel;
-            vtW.free = &MemFree;
-            var writerSeed = MlxIoTypes.IoWriterNew(&memW, vtW);
-            TestHelpers.Ok(MlxIo.SaveSafetensorsWriter(writerSeed, seed, metaSeed), "save_mem_seed");
-            MlxIoTypes.IoWriterFree(writerSeed);
-            var bytesSeed = new byte[memW.pos];
-            Marshal.Copy((nint)memW.data, bytesSeed, 0, (int)memW.pos);
+                    var bytesSeed = TestHelpers.SaveToBuffer(seed, metaSeed, 4096);
+                    File.WriteAllBytes(file, bytesSeed);
 
-            File.WriteAllBytes(file, bytesSeed);
-            MlxMap.StringToArrayFree(seed);
-            MlxMap.StringToStringFree(metaSeed);
-            NativeMemory.Free(buf);
+                    TestHelpers.Ok(MlxIo.LoadSafetensors(out var diskData, out var diskMeta, file, stream), "load_disk");
+                    try
+                    {
+                        var originals = TestHelpers.SnapshotTensors(diskData);
 
-            TestHelpers.Ok(MlxIo.LoadSafetensors(out var data, out var meta, file, s), "load_disk");
-            var it = MlxMap.StringToArrayIteratorNew(data);
-            var originals = new Dictionary<string, float[]>();
-            nint key;
-            MlxArrayHandle arr = default;
-            while (MlxMap.StringToArrayIteratorNext(out key, out arr, it) == 0)
-            {
-                var name = Marshal.PtrToStringUTF8(key)!;
-                TestHelpers.Ok(MlxArray.Eval(arr), "eval");
-                originals[name] = TestHelpers.ToFloat32(arr);
-            }
-
-            MlxArray.Free(arr);
-            MlxMap.StringToArrayIteratorFree(it);
-            MlxMap.StringToArrayFree(data);
-            MlxMap.StringToStringFree(meta);
-
-            var buffer = NativeMemory.Alloc(2048);
-            MemStream mem;
-            mem.data = (byte*)buffer;
-            mem.pos = 0;
-            mem.size = 2048;
-            mem.err = 0;
-            mem.free_data = 0;
-            mem.label = 0;
-            MlxIoVTable vt;
-            vt.is_open = &MemIsOpen;
-            vt.good = &MemGood;
-            vt.tell = &MemTell;
-            vt.seek = &MemSeek;
-            vt.read = &MemRead;
-            vt.read_at_offset = &MemReadAtOffset;
-            vt.write = &MemWrite;
-            vt.label = &MemLabel;
-            vt.free = &MemFree;
-            var writer = MlxIoTypes.IoWriterNew(&mem, vt);
-            TestHelpers.Ok(MlxIo.SaveSafetensorsWriter(writer, seed, metaSeed), "save_mem");
-            MlxIoTypes.IoWriterFree(writer);
-
-            mem.pos = 0;
-            mem.free_data = 1;
-            var reader = MlxIoTypes.IoReaderNew(&mem, vt);
-            TestHelpers.Ok(MlxIo.LoadSafetensorsReader(out var data2, out var meta2, reader, s), "load_mem");
-            MlxIoTypes.IoReaderFree(reader);
-
-            var it2 = MlxMap.StringToArrayIteratorNew(data2);
-            arr = default;
-            while (MlxMap.StringToArrayIteratorNext(out key, out arr, it2) == 0)
-            {
-                var name = Marshal.PtrToStringUTF8(key)!;
-                TestHelpers.Ok(MlxArray.Eval(arr), "eval");
-                var vals = TestHelpers.ToFloat32(arr);
-                var expv = originals[name];
-                Assert.That(vals.Length, Is.EqualTo(expv.Length));
-                for (var i = 0; i < vals.Length; i++)
-                    Assert.That(vals[i], Is.EqualTo(expv[i]).Within(1e-6));
-            }
-
-            MlxArray.Free(arr);
-            MlxMap.StringToArrayIteratorFree(it2);
-            MlxMap.StringToArrayFree(data2);
-            MlxMap.StringToStringFree(meta2);
+                        var memoryBytes = TestHelpers.SaveToBuffer(diskData, diskMeta, 2048);
+                        TestHelpers.LoadAndCompare(memoryBytes, stream, originals);
+                    }
+                    finally
+                    {
+                        MlxMap.StringToArrayFree(diskData);
+                        MlxMap.StringToStringFree(diskMeta);
+                    }
+                }
+                finally
+                {
+                    MlxMap.StringToArrayFree(seed);
+                    MlxMap.StringToStringFree(metaSeed);
+                }
+            });
         }
         finally
         {
