@@ -43,6 +43,16 @@ public static unsafe partial class MlxFft
         MlxStreamHandle s
     );
 
+    /// <summary>Shifts the zero-frequency component to the center of the spectrum along the specified axes.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_fft_fftshift")]
+    public static partial int Fftshift(
+        out MlxArrayHandle res,
+        MlxArrayHandle a,
+        int* axes,
+        nuint axes_num,
+        MlxStreamHandle s
+    );
+
     /// <summary>Computes the inverse 1-D Fourier Transform of the input (inverse FFT).</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_fft_ifft")]
     public static partial int Ifft(
@@ -72,6 +82,16 @@ public static unsafe partial class MlxFft
         MlxArrayHandle a,
         int* n,
         nuint n_num,
+        int* axes,
+        nuint axes_num,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Applies the inverse shift, moving the zero-frequency component back to the origin.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_fft_ifftshift")]
+    public static partial int Ifftshift(
+        out MlxArrayHandle res,
+        MlxArrayHandle a,
         int* axes,
         nuint axes_num,
         MlxStreamHandle s

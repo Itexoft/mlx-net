@@ -33,11 +33,12 @@ if [ -z "${SDKROOT:-}" ] && [ -d /Library/Developer/CommandLineTools/SDKs/MacOSX
 fi
 
 ExtraExports="$BUILD_CACHE_DIR/MLX.NativeAOT.exports"
+# account for exported symbols whose C names already start with an underscore
 /usr/bin/nm -gU -j \
   "$BIN_DIR/libmlx.a" \
   "$BIN_DIR/libmlxc.a" \
   "$BIN_DIR/libgguflib.a" 2>/dev/null \
-| /usr/bin/grep -E '^_mlx_|^_mlxc_|^_gguf_' \
+| /usr/bin/grep -E '^_+mlx_|^_+mlxc_|^_+gguf_' \
 | /usr/bin/sed -E 's/[[:space:]]+$//' \
 | /usr/bin/sort -u > "$ExtraExports"
 

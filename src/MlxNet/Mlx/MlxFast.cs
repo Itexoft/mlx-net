@@ -9,28 +9,116 @@ namespace Itexoft.Mlx;
 
 public static unsafe partial class MlxFast
 {
-    /// <summary>Efficiently converts affine-quantized integers (given scale and zero-point) to floats (applies x*scale + zero to a quantized array).</summary>
-    [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_affine_dequantize")]
-    public static partial int AffineDequantize(
-        out MlxArrayHandle res,
-        MlxArrayHandle w,
-        MlxArrayHandle scales,
-        MlxArrayHandle biases,
-        int group_size,
-        int bits,
-        MlxStreamHandle s
+    /// <summary>Creates a new configuration object for a CUDA kernel.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_cuda_kernel_config_new")]
+    public static partial MlxFastCudaKernelConfig CudaKernelConfigNew();
+
+    /// <summary>Frees a CUDA kernel configuration object.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_cuda_kernel_config_free")]
+    public static partial void CudaKernelConfigFree(
+        MlxFastCudaKernelConfig cls
     );
 
-    /// <summary>Efficiently quantizes float values into integers using an affine mapping (with given scale and zero-point).</summary>
-    [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_affine_quantize")]
-    public static partial int AffineQuantize(
-        out MlxArrayHandle res_0,
-        out MlxArrayHandle res_1,
-        out MlxArrayHandle res_2,
-        MlxArrayHandle w,
-        int group_size,
-        int bits,
-        MlxStreamHandle s
+    /// <summary>Adds an output buffer specification to a CUDA kernel configuration.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_cuda_kernel_config_add_output_arg")]
+    public static partial int CudaKernelConfigAddOutputArg(
+        MlxFastCudaKernelConfig cls,
+        int* shape,
+        nuint size,
+        MlxDType dtype
+    );
+
+    /// <summary>Sets the launch grid dimensions for a CUDA kernel.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_cuda_kernel_config_set_grid")]
+    public static partial int CudaKernelConfigSetGrid(
+        MlxFastCudaKernelConfig cls,
+        int grid1,
+        int grid2,
+        int grid3
+    );
+
+    /// <summary>Sets the per-block thread dimensions for a CUDA kernel.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_cuda_kernel_config_set_thread_group")]
+    public static partial int CudaKernelConfigSetThreadGroup(
+        MlxFastCudaKernelConfig cls,
+        int thread1,
+        int thread2,
+        int thread3
+    );
+
+    /// <summary>Sets the initial buffer fill value for a CUDA kernel output.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_cuda_kernel_config_set_init_value")]
+    public static partial int CudaKernelConfigSetInitValue(
+        MlxFastCudaKernelConfig cls,
+        float value
+    );
+
+    /// <summary>Enables verbose logging for CUDA kernel launches.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_cuda_kernel_config_set_verbose")]
+    public static partial int CudaKernelConfigSetVerbose(
+        MlxFastCudaKernelConfig cls,
+        [MarshalAs(UnmanagedType.I1)] bool verbose
+    );
+
+    /// <summary>Adds a dtype template argument to a CUDA kernel configuration.</summary>
+    [LibraryImport(
+        Common.Lib,
+        EntryPoint = "mlx_fast_cuda_kernel_config_add_template_arg_dtype",
+        StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int CudaKernelConfigAddTemplateArgDType(
+        MlxFastCudaKernelConfig cls,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string name,
+        MlxDType dtype
+    );
+
+    /// <summary>Adds an integer template argument to a CUDA kernel configuration.</summary>
+    [LibraryImport(
+        Common.Lib,
+        EntryPoint = "mlx_fast_cuda_kernel_config_add_template_arg_int",
+        StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int CudaKernelConfigAddTemplateArgInt(
+        MlxFastCudaKernelConfig cls,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string name,
+        int value
+    );
+
+    /// <summary>Adds a boolean template argument to a CUDA kernel configuration.</summary>
+    [LibraryImport(
+        Common.Lib,
+        EntryPoint = "mlx_fast_cuda_kernel_config_add_template_arg_bool",
+        StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int CudaKernelConfigAddTemplateArgBool(
+        MlxFastCudaKernelConfig cls,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string name,
+        [MarshalAs(UnmanagedType.I1)] bool value
+    );
+
+    /// <summary>Compiles a CUDA kernel from source and returns a handle to it.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_cuda_kernel_new", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial MlxFastCudaKernel CudaKernelNew(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string name,
+        MlxVectorStringHandle input_names,
+        MlxVectorStringHandle output_names,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string source,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string header,
+        [MarshalAs(UnmanagedType.I1)] bool ensure_row_contiguous,
+        int shared_memory
+    );
+
+    /// <summary>Releases the CUDA kernel handle.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_cuda_kernel_free")]
+    public static partial void CudaKernelFree(
+        MlxFastCudaKernel cls
+    );
+
+    /// <summary>Launches a compiled CUDA kernel with the specified configuration.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_cuda_kernel_apply")]
+    public static partial int CudaKernelApply(
+        out MlxVectorArrayHandle outputs,
+        MlxFastCudaKernel cls,
+        MlxVectorArrayHandle inputs,
+        MlxFastCudaKernelConfig config,
+        MlxStreamHandle stream
     );
 
     /// <summary>Performs layer normalization on an array with a fast, optimized implementation.</summary>

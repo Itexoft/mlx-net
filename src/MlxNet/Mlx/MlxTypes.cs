@@ -115,6 +115,18 @@ public struct MlxClosureCustomVmap
 }
 
 [StructLayout(LayoutKind.Sequential)]
+public struct MlxFastCudaKernel
+{
+    public nint ctx;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct MlxFastCudaKernelConfig
+{
+    public nint ctx;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 public struct MlxFastMetalKernel
 {
     public nint ctx;
