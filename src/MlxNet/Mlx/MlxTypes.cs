@@ -115,6 +115,18 @@ public struct MlxClosureCustomVmap
 }
 
 [StructLayout(LayoutKind.Sequential)]
+public struct MlxFastCudaKernel
+{
+    public nint ctx;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct MlxFastCudaKernelConfig
+{
+    public nint ctx;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 public struct MlxFastMetalKernel
 {
     public nint ctx;
@@ -160,7 +172,9 @@ public struct MlxIoWriter
 public struct MlxOptionalInt
 {
     public int value;
-    public byte has_value;
+
+    [MarshalAs(UnmanagedType.I1)]
+    public bool has_value;
 }
 
 [StructLayout(LayoutKind.Sequential)]

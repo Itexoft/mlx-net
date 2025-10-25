@@ -8,3 +8,4 @@
 *.user
 src/MlxNativeAot/build-cache/
 Agents.md
+.notes/

@@ -634,7 +634,7 @@ public static unsafe partial class MlxOps
     );
 
     /// <summary>Converts a quantized array (with given scale/zero-point or similar parameters) back to floating-point values.</summary>
-    [LibraryImport(Common.Lib, EntryPoint = "mlx_dequantize")]
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_dequantize", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int Dequantize(
         out MlxArrayHandle res,
         MlxArrayHandle w,
@@ -688,7 +688,7 @@ public static unsafe partial class MlxOps
     [LibraryImport(Common.Lib, EntryPoint = "mlx_einsum", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int Einsum(
         out MlxArrayHandle res,
-        string subscripts,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string subscripts,
         MlxVectorArrayHandle operands,
         MlxStreamHandle s
     );
@@ -828,7 +828,7 @@ public static unsafe partial class MlxOps
     );
 
     /// <summary>Performs matrix multiplication with quantized weights and gathers results.</summary>
-    [LibraryImport(Common.Lib, EntryPoint = "mlx_gather_qmm")]
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_gather_qmm", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int GatherQmm(
         out MlxArrayHandle res,
         MlxArrayHandle x,
@@ -838,8 +838,9 @@ public static unsafe partial class MlxOps
         MlxArrayHandle lhs_indices,
         MlxArrayHandle rhs_indices,
         [MarshalAs(UnmanagedType.I1)] bool transpose,
-        int group_size,
-        int bits,
+        MlxOptionalInt group_size,
+        MlxOptionalInt bits,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string mode,
         [MarshalAs(UnmanagedType.I1)] bool sorted_indices,
         MlxStreamHandle s
     );
@@ -1339,7 +1340,7 @@ public static unsafe partial class MlxOps
         int* high_pad_size,
         nuint high_pad_size_num,
         MlxArrayHandle pad_value,
-        string mode,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string mode,
         MlxStreamHandle s
     );
 
@@ -1350,7 +1351,7 @@ public static unsafe partial class MlxOps
         MlxArrayHandle a,
         int pad_width,
         MlxArrayHandle pad_value,
-        string mode,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string mode,
         MlxStreamHandle s
     );
 
@@ -1424,7 +1425,7 @@ public static unsafe partial class MlxOps
     );
 
     /// <summary>Quantizes a matrix using the specified bit-width and group size.</summary>
-    [LibraryImport(Common.Lib, EntryPoint = "mlx_quantize")]
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_quantize", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int Quantize(
         out MlxVectorArrayHandle res,
         MlxArrayHandle w,
@@ -1435,7 +1436,7 @@ public static unsafe partial class MlxOps
     );
 
     /// <summary>Performs matrix multiplication where operands are quantized, using provided scales and biases.</summary>
-    [LibraryImport(Common.Lib, EntryPoint = "mlx_quantized_matmul")]
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_quantized_matmul", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int QuantizedMatmul(
         out MlxArrayHandle res,
         MlxArrayHandle x,

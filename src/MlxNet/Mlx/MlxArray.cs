@@ -408,34 +408,34 @@ public static unsafe partial class MlxArray
 
     /// <summary>Checks whether the array value is available.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "_mlx_array_is_available")]
-    public static partial int _mlx_array_is_available(
+    public static partial int IsAvailable(
         out byte res,
         MlxArrayHandle arr
     );
 
     /// <summary>Blocks until the array computation completes.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "_mlx_array_wait")]
-    public static partial int _mlx_array_wait(
+    public static partial int Wait(
         MlxArrayHandle arr
     );
 
     /// <summary>Checks if the array memory is contiguous.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "_mlx_array_is_contiguous")]
-    public static partial int _mlx_array_is_contiguous(
+    public static partial int IsContiguous(
         out byte res,
         MlxArrayHandle arr
     );
 
     /// <summary>Checks if the array is contiguous by rows.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "_mlx_array_is_row_contiguous")]
-    public static partial int _mlx_array_is_row_contiguous(
+    public static partial int IsRowContiguous(
         out byte res,
         MlxArrayHandle arr
     );
 
     /// <summary>Checks if the array is contiguous by columns.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "_mlx_array_is_col_contiguous")]
-    public static partial int _mlx_array_is_col_contiguous(
+    public static partial int IsColContiguous(
         out byte res,
         MlxArrayHandle arr
     );

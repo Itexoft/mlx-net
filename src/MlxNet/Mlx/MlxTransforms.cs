@@ -74,4 +74,28 @@ public static unsafe partial class MlxTransforms
         MlxVectorArrayHandle primals,
         MlxVectorArrayHandle cotangents
     );
+
+    /// <summary>Replaces traced inputs/outputs during vmap transformation (internal helper).</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_detail_vmap_replace")]
+    public static partial int DetailVmapReplace(
+        out MlxVectorArrayHandle res,
+        MlxVectorArrayHandle inputs,
+        MlxVectorArrayHandle s_inputs,
+        MlxVectorArrayHandle s_outputs,
+        int* in_axes,
+        nuint in_axes_num,
+        int* out_axes,
+        nuint out_axes_num
+    );
+
+    /// <summary>Traces a function for vectorization, returning transformed outputs and metadata.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_detail_vmap_trace")]
+    public static partial int DetailVmapTrace(
+        out MlxVectorArrayHandle res_0,
+        out MlxVectorArrayHandle res_1,
+        MlxClosureHandle fun,
+        MlxVectorArrayHandle inputs,
+        int* in_axes,
+        nuint in_axes_num
+    );
 }
