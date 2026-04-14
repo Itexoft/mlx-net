@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -7,8 +8,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using Itexoft.Mlx;
-using Itexoft.Mlx.Nn;
 using NUnit.Framework;
 
 namespace Itexoft.Mlx.Nn.Tests;
@@ -16,36 +15,35 @@ namespace Itexoft.Mlx.Nn.Tests;
 [TestFixture]
 public unsafe class ActivationIntegrationTests
 {
-    private static readonly string DataDirectory =
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "TestData", "IntegrationActivations"));
+    private static readonly string dataDirectory = Path.GetFullPath(
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "TestData", "IntegrationActivations"));
 
-    private static readonly string DataFile = Path.Combine(DataDirectory, "activations.json");
+    private static readonly string dataFile = Path.Combine(dataDirectory, "activations.json");
 
     public static IEnumerable<TestCaseData> Cases
     {
         get
         {
-            if (!File.Exists(DataFile))
+            if (!File.Exists(dataFile))
             {
                 yield return new TestCaseData(ActivationTestCase.Missing()).SetName("ActivationDataMissing");
 
                 yield break;
             }
 
-            var json = File.ReadAllText(DataFile);
+            var json = File.ReadAllText(dataFile);
+
             var suite = JsonSerializer.Deserialize<ActivationTestSuite>(
                             json,
                             new JsonSerializerOptions
                             {
-                                PropertyNameCaseInsensitive = true
+                                PropertyNameCaseInsensitive = true,
                             })
                         ?? new ActivationTestSuite();
 
             foreach (var test in suite.Tests)
             {
-                var name = string.IsNullOrWhiteSpace(test.Name)
-                    ? $"Layer_{test.Layer}"
-                    : $"Layer_{test.Layer}_{test.Name}";
+                var name = string.IsNullOrWhiteSpace(test.Name) ? $"Layer_{test.Layer}" : $"Layer_{test.Layer}_{test.Name}";
 
                 yield return new TestCaseData(test).SetName(name);
             }
@@ -63,9 +61,11 @@ public unsafe class ActivationIntegrationTests
         using var module = CreateModule(testCase);
         var unaryLayer = (IUnaryLayer)module;
         var input = CreateArray(testCase.Input);
+
         try
         {
             var output = unaryLayer.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval output");
@@ -90,20 +90,17 @@ public unsafe class ActivationIntegrationTests
         }
     }
 
-    private static Module CreateModule(ActivationTestCase testCase)
+    private static Module CreateModule(ActivationTestCase testCase) => testCase.Layer switch
     {
-        return testCase.Layer switch
-        {
-            "Sigmoid" => new Sigmoid(),
-            "Tanh" => new Tanh(),
-            "ReLU" => new ReLU(),
-            "SiLU" => new SiLU(),
-            "Gelu" => new Gelu(),
-            "LeakyReLU" => new LeakyReLU((float)testCase.GetParameterOrDefault("negative_slope", 0.01)),
-            "Softmax" => new Softmax((int)testCase.GetParameterOrDefault("axis", -1)),
-            _ => throw new NotSupportedException($"Layer '{testCase.Layer}' is not supported by the integration tests.")
-        };
-    }
+        "Sigmoid" => new Sigmoid(),
+        "Tanh" => new Tanh(),
+        "ReLU" => new ReLu(),
+        "SiLU" => new SiLu(),
+        "Gelu" => new Gelu(),
+        "LeakyReLU" => new LeakyReLu((float)testCase.GetParameterOrDefault("negative_slope", 0.01)),
+        "Softmax" => new Softmax((int)testCase.GetParameterOrDefault("axis", -1)),
+        _ => throw new NotSupportedException($"Layer '{testCase.Layer}' is not supported by the integration tests."),
+    };
 
     private static MlxArrayHandle CreateArray(TensorPayload tensor)
     {
@@ -111,11 +108,10 @@ public unsafe class ActivationIntegrationTests
             throw new NotSupportedException($"Only float32 tensors are supported by the activation tests. Received '{tensor.Dtype}'.");
 
         var data = tensor.AsFloatArray();
+
         fixed (float* ptr = data)
         fixed (int* shape = tensor.Shape)
-        {
-            return MlxArray.NewData(ptr, shape, tensor.Shape.Length, MlxDType.MLX_FLOAT32);
-        }
+            return MlxArray.NewData(ptr, shape, tensor.Shape.Length, MlxDType.MlxFloat32);
     }
 
     public sealed class ActivationTestSuite
@@ -150,7 +146,6 @@ public unsafe class ActivationIntegrationTests
         public int[] Shape { get; set; } = [];
         public List<double> Data { get; set; } = [];
 
-        public float[] AsFloatArray()
-            => this.Data.Select(v => (float)v).ToArray();
+        public float[] AsFloatArray() => this.Data.Select(v => (float)v).ToArray();
     }
 }

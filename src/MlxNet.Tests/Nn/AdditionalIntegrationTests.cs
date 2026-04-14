@@ -1,10 +1,8 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
-using System;
-using Itexoft.Mlx;
-using Itexoft.Mlx.Nn;
 using NUnit.Framework;
 
 namespace Itexoft.Mlx.Nn.Tests;
@@ -17,11 +15,13 @@ public unsafe class AdditionalIntegrationTests
     {
         TestHelpers.RequireNativeOrIgnore();
 
-        using var sequential = new Sequential(new Identity(), new ReLU());
+        using var sequential = new Sequential(new Identity(), new ReLu());
         var input = CreateFloatArray([1f, -2f, 3f, -4f], [1, 4]);
+
         try
         {
             var result = sequential.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(result), "eval sequential");
@@ -49,16 +49,16 @@ public unsafe class AdditionalIntegrationTests
         embedding.Weight.SetValue(CreateFloatArray([1f, 0f, 0f, 1f, 1f, 1f], [3, 2]));
 
         var indices = CreateIntArray([2, 0, 1], [3]);
+
         try
         {
             var output = embedding.Forward(indices);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval embedding forward");
                 var values = TestHelpers.ToFloat32(output);
-                Assert.That(
-                    values,
-                    Is.EqualTo(new[] { 1f, 1f, 1f, 0f, 0f, 1f }).Within(1e-6));
+                Assert.That(values, Is.EqualTo(new[] { 1f, 1f, 1f, 0f, 0f, 1f }).Within(1e-6));
             }
             finally
             {
@@ -72,9 +72,11 @@ public unsafe class AdditionalIntegrationTests
         }
 
         var linearInput = CreateFloatArray([1f, 2f], [1, 2]);
+
         try
         {
             var projected = embedding.AsLinear(linearInput);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(projected), "eval embedding linear");
@@ -100,9 +102,11 @@ public unsafe class AdditionalIntegrationTests
 
         using var norm = new RmsNorm(2, 0f);
         var input = CreateFloatArray([3f, 4f], [1, 2]);
+
         try
         {
             var output = norm.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval rmsnorm");
@@ -123,127 +127,22 @@ public unsafe class AdditionalIntegrationTests
     }
 
     [Test]
-    public void Conv3d_ComputesSlidingWindowSum()
-    {
-        TestHelpers.RequireNativeOrIgnore();
-
-        using var conv = new Conv3d(1, 1, (2, 2, 2), bias: false);
-        conv.KernelParameter.SetValue(CreateFloatArray([1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f], [1, 2, 2, 2, 1]));
-
-        var depth = 3;
-        var height = 3;
-        var width = 3;
-        var inputValues = new float[depth * height * width];
-        for (var idx = 0; idx < inputValues.Length; idx++)
-            inputValues[idx] = idx + 1;
-
-        var input = CreateFloatArray(inputValues, [1, depth, height, width, 1]);
-        try
-        {
-            var output = conv.Forward(input);
-            try
-            {
-                TestHelpers.Ok(MlxArray.Eval(output), "eval conv3d");
-                var values = TestHelpers.ToFloat32(output);
-                var expected = new float[8];
-                var o = 0;
-                for (var z = 0; z < depth - 1; z++)
-                for (var y = 0; y < height - 1; y++)
-                for (var x = 0; x < width - 1; x++)
-                {
-                    var sum = 0f;
-                    for (var kz = 0; kz < 2; kz++)
-                    for (var ky = 0; ky < 2; ky++)
-                    for (var kx = 0; kx < 2; kx++)
-                    {
-                        var dz = z + kz;
-                        var dy = y + ky;
-                        var dx = x + kx;
-                        sum += inputValues[(dz * height + dy) * width + dx];
-                    }
-
-                    expected[o++] = sum;
-                }
-
-                Assert.That(values, Is.EqualTo(expected).Within(1e-5));
-            }
-            finally
-            {
-                if (output.ctx != 0)
-                    MlxArray.Free(output);
-            }
-        }
-        finally
-        {
-            MlxArray.Free(input);
-        }
-    }
+    public void Conv3d_ComputesSlidingWindowSum() => AssertConv3dWithOnesKernel(3, 3, 3, 2, 2, 2);
 
     [Test]
-    public void ConvTranspose3d_ReconstructsExpectedVolume()
-    {
-        TestHelpers.RequireNativeOrIgnore();
+    public void Conv3d_SlidesAcrossHeightAxis() => AssertConv3dWithOnesKernel(1, 3, 1, 1, 2, 1);
 
-        using var conv = new ConvTranspose3d(
-            1,
-            1,
-            (2, 2, 2),
-            (1, 1, 1),
-            (0, 0, 0),
-            (1, 1, 1),
-            outputPadding: (0, 0, 0),
-            bias: false);
-        conv.KernelParameter.SetValue(CreateFloatArray([1f, 1f, 1f, 1f, 1f, 1f, 1f, 1f], [1, 2, 2, 2, 1]));
+    [Test]
+    public void Conv3d_SlidesAcrossWidthAxis() => AssertConv3dWithOnesKernel(1, 1, 3, 1, 1, 2);
 
-        var depth = 2;
-        var height = 2;
-        var width = 2;
-        var inputValues = new float[depth * height * width];
-        for (var idx = 0; idx < inputValues.Length; idx++)
-            inputValues[idx] = idx + 1;
+    [Test]
+    public void ConvTranspose3d_ReconstructsExpectedVolume() => AssertConvTranspose3dWithOnesKernel(2, 2, 2, 2, 2, 2);
 
-        var input = CreateFloatArray(inputValues, [1, depth, height, width, 1]);
-        try
-        {
-            var output = conv.Forward(input);
-            try
-            {
-                TestHelpers.Ok(MlxArray.Eval(output), "eval convtranspose3d");
-                var values = TestHelpers.ToFloat32(output);
-                var outDepth = 3;
-                var outHeight = 3;
-                var outWidth = 3;
-                var expected = new float[outDepth * outHeight * outWidth];
+    [Test]
+    public void ConvTranspose3d_SpreadsAcrossHeightAxis() => AssertConvTranspose3dWithOnesKernel(1, 2, 1, 1, 2, 1);
 
-                for (var z = 0; z < depth; z++)
-                for (var y = 0; y < height; y++)
-                for (var x = 0; x < width; x++)
-                {
-                    var contribution = inputValues[(z * height + y) * width + x];
-                    for (var kz = 0; kz < 2; kz++)
-                    for (var ky = 0; ky < 2; ky++)
-                    for (var kx = 0; kx < 2; kx++)
-                    {
-                        var oz = z + kz;
-                        var oy = y + ky;
-                        var ox = x + kx;
-                        expected[(oz * outHeight + oy) * outWidth + ox] += contribution;
-                    }
-                }
-
-                Assert.That(values, Is.EqualTo(expected).Within(1e-5));
-            }
-            finally
-            {
-                if (output.ctx != 0)
-                    MlxArray.Free(output);
-            }
-        }
-        finally
-        {
-            MlxArray.Free(input);
-        }
-    }
+    [Test]
+    public void ConvTranspose3d_SpreadsAcrossWidthAxis() => AssertConvTranspose3dWithOnesKernel(1, 1, 2, 1, 1, 2);
 
     [Test]
     public void Rnn_WithZeroWeights_ProducesZeroSequence()
@@ -255,9 +154,11 @@ public unsafe class AdditionalIntegrationTests
         ZeroParameter(rnn, "whh", [0f], [1, 1]);
 
         var input = CreateFloatArray([0.5f, -0.25f], [2, 1]);
+
         try
         {
             var output = rnn.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval rnn");
@@ -290,9 +191,11 @@ public unsafe class AdditionalIntegrationTests
         ZeroParameter(gru, "bias_hidden", new float[1], [1]);
 
         var input = CreateFloatArray([0.5f, 0.25f], [2, 1]);
+
         try
         {
             var output = gru.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval gru");
@@ -324,9 +227,11 @@ public unsafe class AdditionalIntegrationTests
         ZeroParameter(lstm, "bias", new float[4], [4]);
 
         var input = CreateFloatArray([1f, -1f], [2, 1]);
+
         try
         {
             var (hidden, cell) = lstm.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(hidden), "eval lstm hidden");
@@ -346,6 +251,7 @@ public unsafe class AdditionalIntegrationTests
             {
                 if (hidden.ctx != 0)
                     MlxArray.Free(hidden);
+
                 if (cell.ctx != 0)
                     MlxArray.Free(cell);
             }
@@ -360,18 +266,193 @@ public unsafe class AdditionalIntegrationTests
     {
         fixed (float* data = values)
         fixed (int* dims = shape)
-        {
-            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MLX_FLOAT32);
-        }
+            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MlxFloat32);
     }
 
     private static MlxArrayHandle CreateIntArray(int[] values, int[] shape)
     {
         fixed (int* data = values)
         fixed (int* dims = shape)
+            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MlxInt32);
+    }
+
+    private static void AssertConv3dWithOnesKernel(int depth, int height, int width, int kernelDepth, int kernelHeight, int kernelWidth)
+    {
+        TestHelpers.RequireNativeOrIgnore();
+
+        using var conv = new Conv3D(1, 1, (kernelDepth, kernelHeight, kernelWidth), bias: false);
+
+        conv.KernelParameter.SetValue(
+            CreateFloatArray(CreateFilledArray(kernelDepth * kernelHeight * kernelWidth, 1f), [1, kernelDepth, kernelHeight, kernelWidth, 1]));
+
+        var inputValues = CreateSequentialArray(depth * height * width);
+        var input = CreateFloatArray(inputValues, [1, depth, height, width, 1]);
+
+        try
         {
-            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MLX_INT32);
+            var output = conv.Forward(input);
+
+            try
+            {
+                TestHelpers.Ok(MlxArray.Eval(output), "eval conv3d");
+                var values = TestHelpers.ToFloat32(output);
+                var expected = ComputeExpectedConv3dWithOnesKernel(inputValues, depth, height, width, kernelDepth, kernelHeight, kernelWidth);
+
+                Assert.That(values, Is.EqualTo(expected).Within(1e-5));
+            }
+            finally
+            {
+                if (output.ctx != 0)
+                    MlxArray.Free(output);
+            }
         }
+        finally
+        {
+            MlxArray.Free(input);
+        }
+    }
+
+    private static void AssertConvTranspose3dWithOnesKernel(int depth, int height, int width, int kernelDepth, int kernelHeight, int kernelWidth)
+    {
+        TestHelpers.RequireNativeOrIgnore();
+
+        using var conv = new ConvTranspose3D(
+            1,
+            1,
+            (kernelDepth, kernelHeight, kernelWidth),
+            (1, 1, 1),
+            (0, 0, 0),
+            (1, 1, 1),
+            outputPadding: (0, 0, 0),
+            bias: false);
+
+        conv.KernelParameter.SetValue(
+            CreateFloatArray(CreateFilledArray(kernelDepth * kernelHeight * kernelWidth, 1f), [1, kernelDepth, kernelHeight, kernelWidth, 1]));
+
+        var inputValues = CreateSequentialArray(depth * height * width);
+        var input = CreateFloatArray(inputValues, [1, depth, height, width, 1]);
+
+        try
+        {
+            var output = conv.Forward(input);
+
+            try
+            {
+                TestHelpers.Ok(MlxArray.Eval(output), "eval convtranspose3d");
+                var values = TestHelpers.ToFloat32(output);
+
+                var expected = ComputeExpectedConvTranspose3dWithOnesKernel(
+                    inputValues,
+                    depth,
+                    height,
+                    width,
+                    kernelDepth,
+                    kernelHeight,
+                    kernelWidth);
+
+                Assert.That(values, Is.EqualTo(expected).Within(1e-5));
+            }
+            finally
+            {
+                if (output.ctx != 0)
+                    MlxArray.Free(output);
+            }
+        }
+        finally
+        {
+            MlxArray.Free(input);
+        }
+    }
+
+    private static float[] CreateSequentialArray(int length)
+    {
+        var values = new float[length];
+
+        for (var i = 0; i < values.Length; i++)
+            values[i] = i + 1;
+
+        return values;
+    }
+
+    private static float[] CreateFilledArray(int length, float value)
+    {
+        var values = new float[length];
+
+        for (var i = 0; i < values.Length; i++)
+            values[i] = value;
+
+        return values;
+    }
+
+    private static float[] ComputeExpectedConv3dWithOnesKernel(
+        float[] inputValues,
+        int depth,
+        int height,
+        int width,
+        int kernelDepth,
+        int kernelHeight,
+        int kernelWidth)
+    {
+        var outDepth = depth - kernelDepth + 1;
+        var outHeight = height - kernelHeight + 1;
+        var outWidth = width - kernelWidth + 1;
+        var expected = new float[outDepth * outHeight * outWidth];
+        var outputIndex = 0;
+
+        for (var z = 0; z < outDepth; z++)
+        for (var y = 0; y < outHeight; y++)
+        for (var x = 0; x < outWidth; x++)
+        {
+            var sum = 0f;
+
+            for (var kz = 0; kz < kernelDepth; kz++)
+            for (var ky = 0; ky < kernelHeight; ky++)
+            for (var kx = 0; kx < kernelWidth; kx++)
+            {
+                var dz = z + kz;
+                var dy = y + ky;
+                var dx = x + kx;
+                sum += inputValues[(dz * height + dy) * width + dx];
+            }
+
+            expected[outputIndex++] = sum;
+        }
+
+        return expected;
+    }
+
+    private static float[] ComputeExpectedConvTranspose3dWithOnesKernel(
+        float[] inputValues,
+        int depth,
+        int height,
+        int width,
+        int kernelDepth,
+        int kernelHeight,
+        int kernelWidth)
+    {
+        var outDepth = depth + kernelDepth - 1;
+        var outHeight = height + kernelHeight - 1;
+        var outWidth = width + kernelWidth - 1;
+        var expected = new float[outDepth * outHeight * outWidth];
+
+        for (var z = 0; z < depth; z++)
+        for (var y = 0; y < height; y++)
+        for (var x = 0; x < width; x++)
+        {
+            var contribution = inputValues[(z * height + y) * width + x];
+
+            for (var kz = 0; kz < kernelDepth; kz++)
+            for (var ky = 0; ky < kernelHeight; ky++)
+            for (var kx = 0; kx < kernelWidth; kx++)
+            {
+                var oz = z + kz;
+                var oy = y + ky;
+                var ox = x + kx;
+                expected[(oz * outHeight + oy) * outWidth + ox] += contribution;
+            }
+        }
+
+        return expected;
     }
 
     private static void ZeroParameter(Module module, string path, float[] values, int[] shape)

@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -7,16 +8,16 @@ using System;
 namespace Itexoft.Mlx.Nn;
 
 /// <summary>
-/// Represents a named tensor parameter that belongs to a <see cref="Module"/>.
+/// Represents a named tensor parameter that belongs to a <see cref="Module" />.
 /// </summary>
 public sealed class ModuleParameter : IDisposable
 {
-    private MlxArrayHandle _value;
+    private MlxArrayHandle value;
 
     internal ModuleParameter(string name, MlxArrayHandle value, bool trainable)
     {
         this.Name = name;
-        this._value = value;
+        this.value = value;
         this.Trainable = trainable;
     }
 
@@ -33,30 +34,30 @@ public sealed class ModuleParameter : IDisposable
     /// <summary>
     /// Gets the underlying MLX array handle for the parameter.
     /// </summary>
-    public MlxArrayHandle Value => this._value;
+    public MlxArrayHandle Value => this.value;
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (!TensorUtilities.IsNull(this.value))
+        {
+            MlxArray.Free(this.value);
+            this.value = default;
+        }
+    }
 
     /// <summary>
     /// Replaces the current MLX array backing this parameter.
     /// </summary>
     /// <param name="handle">Handle to the new array. Ownership is transferred to the parameter.</param>
     /// <param name="disposeCurrent">
-    /// When <c>true</c>, the previously owned handle is released via <see cref="MlxArray.Free(MlxArrayHandle)"/>.
+    /// When <c>true</c>, the previously owned handle is released via <see cref="MlxArray.Free(MlxArrayHandle)" />.
     /// </param>
     public void SetValue(MlxArrayHandle handle, bool disposeCurrent = true)
     {
-        if (disposeCurrent && !TensorUtilities.IsNull(this._value))
-            MlxArray.Free(this._value);
+        if (disposeCurrent && !TensorUtilities.IsNull(this.value))
+            MlxArray.Free(this.value);
 
-        this._value = handle;
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        if (!TensorUtilities.IsNull(this._value))
-        {
-            MlxArray.Free(this._value);
-            this._value = default;
-        }
+        this.value = handle;
     }
 }

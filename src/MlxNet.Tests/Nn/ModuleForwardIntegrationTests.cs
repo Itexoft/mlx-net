@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -7,8 +8,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using Itexoft.Mlx;
-using Itexoft.Mlx.Nn;
 using NUnit.Framework;
 
 namespace Itexoft.Mlx.Nn.Tests;
@@ -16,36 +15,35 @@ namespace Itexoft.Mlx.Nn.Tests;
 [TestFixture]
 public unsafe class ModuleForwardIntegrationTests
 {
-    private static readonly string DataDirectory =
-        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "TestData", "IntegrationModules"));
+    private static readonly string dataDirectory = Path.GetFullPath(
+        Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "TestData", "IntegrationModules"));
 
-    private static readonly string DataFile = Path.Combine(DataDirectory, "modules.json");
+    private static readonly string dataFile = Path.Combine(dataDirectory, "modules.json");
 
     public static IEnumerable<TestCaseData> Cases
     {
         get
         {
-            if (!File.Exists(DataFile))
+            if (!File.Exists(dataFile))
             {
                 yield return new TestCaseData(ModuleTestCase.Missing()).SetName("ModuleDataMissing");
 
                 yield break;
             }
 
-            var json = File.ReadAllText(DataFile);
+            var json = File.ReadAllText(dataFile);
+
             var suite = JsonSerializer.Deserialize<ModuleTestSuite>(
                             json,
                             new JsonSerializerOptions
                             {
-                                PropertyNameCaseInsensitive = true
+                                PropertyNameCaseInsensitive = true,
                             })
                         ?? new ModuleTestSuite();
 
             foreach (var test in suite.Tests)
             {
-                var name = string.IsNullOrWhiteSpace(test.Name)
-                    ? $"Module_{test.Layer}"
-                    : $"Module_{test.Layer}_{test.Name}";
+                var name = string.IsNullOrWhiteSpace(test.Name) ? $"Module_{test.Layer}" : $"Module_{test.Layer}_{test.Name}";
 
                 yield return new TestCaseData(test).SetName(name);
             }
@@ -71,9 +69,11 @@ public unsafe class ModuleForwardIntegrationTests
         }
 
         var input = CreateArray(testCase.Input);
+
         try
         {
             var output = unary.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval output");
@@ -98,39 +98,37 @@ public unsafe class ModuleForwardIntegrationTests
         }
     }
 
-    private static Module CreateModule(ModuleTestCase testCase)
+    private static Module CreateModule(ModuleTestCase testCase) => testCase.Layer switch
     {
-        return testCase.Layer switch
-        {
-            "Linear" => new Linear(
-                testCase.Settings.RequireInt("inputDimensions"),
-                testCase.Settings.RequireInt("outputDimensions"),
-                testCase.Settings.RequireBool("bias", true)),
-            "Conv1d" => new Conv1d(
-                testCase.Settings.RequireInt("in_channels"),
-                testCase.Settings.RequireInt("out_channels"),
-                testCase.Settings.RequireInt("kernel_size"),
-                testCase.Settings.RequireInt("stride", 1),
-                testCase.Settings.RequireInt("padding", 0),
-                testCase.Settings.RequireInt("dilation", 1),
-                testCase.Settings.RequireInt("groups", 1),
-                testCase.Settings.RequireBool("bias", true)),
-            "Conv2d" => new Conv2d(
-                testCase.Settings.RequireInt("in_channels"),
-                testCase.Settings.RequireInt("out_channels"),
-                testCase.Settings.RequirePair("kernel_size"),
-                testCase.Settings.RequirePair("stride", new IntPair(1, 1)),
-                testCase.Settings.RequirePair("padding", new IntPair(0, 0)),
-                testCase.Settings.RequirePair("dilation", new IntPair(1, 1)),
-                testCase.Settings.RequireInt("groups", 1),
-                testCase.Settings.RequireBool("bias", true)),
-            _ => throw new NotSupportedException($"Module '{testCase.Layer}' is not supported.")
-        };
-    }
+        "Linear" => new Linear(
+            testCase.Settings.RequireInt("inputDimensions"),
+            testCase.Settings.RequireInt("outputDimensions"),
+            testCase.Settings.RequireBool("bias", true)),
+        "Conv1d" => new Conv1D(
+            testCase.Settings.RequireInt("in_channels"),
+            testCase.Settings.RequireInt("out_channels"),
+            testCase.Settings.RequireInt("kernel_size"),
+            testCase.Settings.RequireInt("stride", 1),
+            testCase.Settings.RequireInt("padding", 0),
+            testCase.Settings.RequireInt("dilation", 1),
+            testCase.Settings.RequireInt("groups", 1),
+            testCase.Settings.RequireBool("bias", true)),
+        "Conv2d" => new Conv2D(
+            testCase.Settings.RequireInt("in_channels"),
+            testCase.Settings.RequireInt("out_channels"),
+            testCase.Settings.RequirePair("kernel_size"),
+            testCase.Settings.RequirePair("stride", new IntPair(1, 1)),
+            testCase.Settings.RequirePair("padding", new IntPair(0, 0)),
+            testCase.Settings.RequirePair("dilation", new IntPair(1, 1)),
+            testCase.Settings.RequireInt("groups", 1),
+            testCase.Settings.RequireBool("bias", true)),
+        _ => throw new NotSupportedException($"Module '{testCase.Layer}' is not supported."),
+    };
 
     private static void ApplyParameters(Module module, List<ModuleParameterPayload> parameters)
     {
         var updates = new ParameterCollection();
+
         foreach (var parameter in parameters)
         {
             var handle = CreateArray(parameter.Tensor);
@@ -146,11 +144,10 @@ public unsafe class ModuleForwardIntegrationTests
             throw new NotSupportedException($"Tensor dtype '{tensor.Dtype}' is not supported in module tests.");
 
         var data = tensor.AsFloatArray();
+
         fixed (float* ptr = data)
         fixed (int* shape = tensor.Shape)
-        {
-            return MlxArray.NewData(ptr, shape, tensor.Shape.Length, MlxDType.MLX_FLOAT32);
-        }
+            return MlxArray.NewData(ptr, shape, tensor.Shape.Length, MlxDType.MlxFloat32);
     }
 
     public sealed class ModuleTestSuite
@@ -185,8 +182,7 @@ public unsafe class ModuleForwardIntegrationTests
         public int[] Shape { get; set; } = [];
         public List<double> Data { get; set; } = [];
 
-        public float[] AsFloatArray()
-            => this.Data.Select(v => (float)v).ToArray();
+        public float[] AsFloatArray() => this.Data.Select(v => (float)v).ToArray();
     }
 }
 
@@ -208,9 +204,9 @@ file static class JsonSettingsExtensions
             JsonValueKind.Array => ReadArray(element) switch
             {
                 { Length: 1 } values => values[0],
-                _ => throw new InvalidOperationException($"Setting '{key}' must contain a single integer.")
+                _ => throw new InvalidOperationException($"Setting '{key}' must contain a single integer."),
             },
-            _ => throw new InvalidOperationException($"Setting '{key}' is not an integer.")
+            _ => throw new InvalidOperationException($"Setting '{key}' is not an integer."),
         };
     }
 
@@ -224,7 +220,7 @@ file static class JsonSettingsExtensions
             JsonValueKind.True => true,
             JsonValueKind.False => false,
             JsonValueKind.Number => Math.Abs(element.GetDouble()) > double.Epsilon,
-            _ => defaultValue
+            _ => defaultValue,
         };
     }
 
@@ -247,6 +243,7 @@ file static class JsonSettingsExtensions
     private static int[] ReadArray(JsonElement element)
     {
         var list = new List<int>();
+
         foreach (var item in element.EnumerateArray())
             list.Add(item.GetInt32());
 

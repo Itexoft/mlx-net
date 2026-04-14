@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -45,12 +46,13 @@ public sealed class Tanh : Module, IUnaryLayer
 /// <summary>
 /// Applies the Rectified Linear Unit.
 /// </summary>
-public sealed class ReLU : Module, IUnaryLayer
+public sealed class ReLu : Module, IUnaryLayer
 {
     public MlxArrayHandle Forward(MlxArrayHandle input)
     {
         var dtype = MlxArray.DType(input);
         var zero = TensorFactory.Scalar(0f, dtype);
+
         try
         {
             var result = input.Maximum(zero);
@@ -68,15 +70,17 @@ public sealed class ReLU : Module, IUnaryLayer
 /// <summary>
 /// Applies a leaky variant of the Rectified Linear Unit.
 /// </summary>
-public sealed class LeakyReLU(float negativeSlope = 0.01f) : Module, IUnaryLayer
+public sealed class LeakyReLu(float negativeSlope = 0.01f) : Module, IUnaryLayer
 {
     public MlxArrayHandle Forward(MlxArrayHandle input)
     {
         var dtype = MlxArray.DType(input);
         var slope = TensorFactory.Scalar(negativeSlope, dtype);
+
         try
         {
             var scaled = input.Multiply(slope);
+
             try
             {
                 var result = scaled.Maximum(input);
@@ -99,7 +103,7 @@ public sealed class LeakyReLU(float negativeSlope = 0.01f) : Module, IUnaryLayer
 /// <summary>
 /// Applies the Sigmoid Linear Unit (also known as Swish).
 /// </summary>
-public sealed class SiLU : Module, IUnaryLayer
+public sealed class SiLu : Module, IUnaryLayer
 {
     public MlxArrayHandle Forward(MlxArrayHandle input)
     {
@@ -128,6 +132,7 @@ public sealed class Gelu : Module, IUnaryLayer
         MlxArrayHandle erf = default;
         MlxArrayHandle term = default;
         MlxArrayHandle prod = default;
+
         try
         {
             scaled = input.Divide(sqrt2);
@@ -142,16 +147,22 @@ public sealed class Gelu : Module, IUnaryLayer
         {
             if (!TensorUtilities.IsNull(scaled))
                 MlxArray.Free(scaled);
+
             if (!TensorUtilities.IsNull(erf))
                 MlxArray.Free(erf);
+
             if (!TensorUtilities.IsNull(term))
                 MlxArray.Free(term);
+
             if (!TensorUtilities.IsNull(prod))
                 MlxArray.Free(prod);
+
             if (!TensorUtilities.IsNull(sqrt2))
                 MlxArray.Free(sqrt2);
+
             if (!TensorUtilities.IsNull(half))
                 MlxArray.Free(half);
+
             if (!TensorUtilities.IsNull(one))
                 MlxArray.Free(one);
         }
@@ -165,6 +176,5 @@ public sealed class Softmax(int axis = -1) : Module, IUnaryLayer
 {
     public int Axis { get; } = axis;
 
-    public MlxArrayHandle Forward(MlxArrayHandle input)
-        => input.Softmax(this.Axis);
+    public MlxArrayHandle Forward(MlxArrayHandle input) => input.Softmax(this.Axis);
 }

@@ -1,11 +1,12 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
 using System;
-using NUnit.Framework;
 using Itexoft.Mlx;
 using Itexoft.Mlx.Nn;
+using NUnit.Framework;
 
 namespace MlxNet.Tests.Nn;
 
@@ -21,17 +22,17 @@ public unsafe class HighLevelNnTests
 
         var weightData = stackalloc float[] { 1f, 2f, 3f, 4f };
         var weightShape = stackalloc int[] { 2, 2 };
-        var weight = MlxArray.NewData(weightData, weightShape, 2, MlxDType.MLX_FLOAT32);
+        var weight = MlxArray.NewData(weightData, weightShape, 2, MlxDType.MlxFloat32);
         linear.Weight.SetValue(weight);
 
         var biasData = stackalloc float[] { 0f, 1f };
         var biasShape = stackalloc int[] { 2 };
-        var bias = MlxArray.NewData(biasData, biasShape, 1, MlxDType.MLX_FLOAT32);
+        var bias = MlxArray.NewData(biasData, biasShape, 1, MlxDType.MlxFloat32);
         linear.Bias!.SetValue(bias);
 
         var inputData = stackalloc float[] { 1f, 2f };
         var inputShape = stackalloc int[] { 1, 2 };
-        var input = MlxArray.NewData(inputData, inputShape, 2, MlxDType.MLX_FLOAT32);
+        var input = MlxArray.NewData(inputData, inputShape, 2, MlxDType.MlxFloat32);
 
         var result = linear.Forward(input);
         TestHelpers.Ok(MlxArray.Eval(result), "eval");
@@ -52,7 +53,7 @@ public unsafe class HighLevelNnTests
         using var norm = new LayerNorm(2);
         var inputData = stackalloc float[] { 1f, 3f };
         var inputShape = stackalloc int[] { 1, 2 };
-        var input = MlxArray.NewData(inputData, inputShape, 2, MlxDType.MLX_FLOAT32);
+        var input = MlxArray.NewData(inputData, inputShape, 2, MlxDType.MlxFloat32);
 
         var result = norm.Forward(input);
         TestHelpers.Ok(MlxArray.Eval(result), "eval");
@@ -75,17 +76,23 @@ public unsafe class HighLevelNnTests
         var stream = stackalloc int[] { 1, 3, 4 };
 
         var queriesData = stackalloc float[12];
+
         for (var i = 0; i < 12; i++)
             queriesData[i] = 0f;
-        var queries = MlxArray.NewData(queriesData, stream, 3, MlxDType.MLX_FLOAT32);
+
+        var queries = MlxArray.NewData(queriesData, stream, 3, MlxDType.MlxFloat32);
         var keysData = stackalloc float[12];
+
         for (var i = 0; i < 12; i++)
             keysData[i] = 0f;
-        var keys = MlxArray.NewData(keysData, stream, 3, MlxDType.MLX_FLOAT32);
+
+        var keys = MlxArray.NewData(keysData, stream, 3, MlxDType.MlxFloat32);
         var valuesData = stackalloc float[12];
+
         for (var i = 0; i < 12; i++)
             valuesData[i] = 0f;
-        var values = MlxArray.NewData(valuesData, stream, 3, MlxDType.MLX_FLOAT32);
+
+        var values = MlxArray.NewData(valuesData, stream, 3, MlxDType.MlxFloat32);
 
         var output = mha.Forward(queries, keys, values);
         TestHelpers.Ok(MlxArray.Eval(output), "eval");
@@ -104,16 +111,16 @@ public unsafe class HighLevelNnTests
     {
         TestHelpers.RequireNativeOrIgnore();
 
-        using var conv = new Conv1d(1, 1, 3, 1, 0, 1, 1, false);
+        using var conv = new Conv1D(1, 1, 3, 1, 0, 1, 1, false);
 
         var weightData = stackalloc float[] { 1f, 1f, 1f };
         var weightShape = stackalloc int[] { 1, 3, 1 };
-        var weight = MlxArray.NewData(weightData, weightShape, 3, MlxDType.MLX_FLOAT32);
+        var weight = MlxArray.NewData(weightData, weightShape, 3, MlxDType.MlxFloat32);
         conv.KernelParameter.SetValue(weight);
 
         var inputData = stackalloc float[] { 1f, 2f, 3f, 4f, 5f };
         var inputShape = stackalloc int[] { 1, 5, 1 };
-        var input = MlxArray.NewData(inputData, inputShape, 3, MlxDType.MLX_FLOAT32);
+        var input = MlxArray.NewData(inputData, inputShape, 3, MlxDType.MlxFloat32);
 
         var output = conv.Forward(input);
         TestHelpers.Ok(MlxArray.Eval(output), "eval");
@@ -130,29 +137,33 @@ public unsafe class HighLevelNnTests
     {
         TestHelpers.RequireNativeOrIgnore();
 
-        using var conv = new ConvTranspose1d(1, 1, 3, 1, 0, 1, 1, bias: false);
+        using var conv = new ConvTranspose1D(1, 1, 3, 1, 0, 1, 1, bias: false);
 
         var weightData = stackalloc float[] { 1f, 1f, 1f };
         var weightShape = stackalloc int[] { 1, 3, 1 };
-        var weight = MlxArray.NewData(weightData, weightShape, 3, MlxDType.MLX_FLOAT32);
+        var weight = MlxArray.NewData(weightData, weightShape, 3, MlxDType.MlxFloat32);
         conv.KernelParameter.SetValue(weight);
 
         var inputValues = new[] { 1f, 2f, 3f };
         var inputData = stackalloc float[inputValues.Length];
+
         for (var i = 0; i < inputValues.Length; i++)
             inputData[i] = inputValues[i];
+
         var inputShape = stackalloc int[] { 1, inputValues.Length, 1 };
-        var input = MlxArray.NewData(inputData, inputShape, 3, MlxDType.MLX_FLOAT32);
+        var input = MlxArray.NewData(inputData, inputShape, 3, MlxDType.MlxFloat32);
 
         var output = conv.Forward(input);
         TestHelpers.Ok(MlxArray.Eval(output), "eval");
 
         var expectedLength = (inputValues.Length - 1) * 1 - 2 * 0 + (3 - 1) * 1 + 1;
         var expected = new float[expectedLength];
+
         for (var i = 0; i < inputValues.Length; i++)
         for (var k = 0; k < 3; k++)
         {
             var y = i * 1 - 0 + k * 1;
+
             if (y >= 0 && y < expectedLength)
                 expected[y] += inputValues[i];
         }
@@ -169,49 +180,44 @@ public unsafe class HighLevelNnTests
     {
         TestHelpers.RequireNativeOrIgnore();
 
-        using var conv = new ConvTranspose2d(
-            1,
-            1,
-            (2, 2),
-            (1, 1),
-            (0, 0),
-            (1, 1),
-            1,
-            bias: false);
+        using var conv = new ConvTranspose2D(1, 1, (2, 2), (1, 1), (0, 0), (1, 1), 1, bias: false);
 
         var weightData = stackalloc float[] { 1f, 1f, 1f, 1f };
         var weightShape = stackalloc int[] { 1, 2, 2, 1 };
-        var weight = MlxArray.NewData(weightData, weightShape, 4, MlxDType.MLX_FLOAT32);
+        var weight = MlxArray.NewData(weightData, weightShape, 4, MlxDType.MlxFloat32);
         conv.KernelParameter.SetValue(weight);
 
         var inputHeight = 2;
         var inputWidth = 2;
-        var inputValues = new float[,] { { 1f, 2f }, { 3f, 4f } };
+        var inputValues = new[,] { { 1f, 2f }, { 3f, 4f } };
         var inputData = stackalloc float[inputHeight * inputWidth];
         var index = 0;
+
         for (var h = 0; h < inputHeight; h++)
         for (var w = 0; w < inputWidth; w++)
             inputData[index++] = inputValues[h, w];
 
         var inputShape = stackalloc int[] { 1, inputHeight, inputWidth, 1 };
-        var input = MlxArray.NewData(inputData, inputShape, 4, MlxDType.MLX_FLOAT32);
+        var input = MlxArray.NewData(inputData, inputShape, 4, MlxDType.MlxFloat32);
 
         var output = conv.Forward(input);
         TestHelpers.Ok(MlxArray.Eval(output), "eval");
 
-        var outputHeight = (inputHeight - 1) * 1 - 2 * 0 + (2 - 1) * 1 + 1;
-        var outputWidth = (inputWidth - 1) * 1 - 2 * 0 + (2 - 1) * 1 + 1;
+        var outputHeight = inputHeight - 1 - 2 * 0 + (2 - 1) * 1 + 1;
+        var outputWidth = inputWidth - 1 - 2 * 0 + (2 - 1) * 1 + 1;
         var expected = new float[outputHeight * outputWidth];
 
         for (var h = 0; h < inputHeight; h++)
         for (var w = 0; w < inputWidth; w++)
         {
             var value = inputValues[h, w];
+
             for (var kh = 0; kh < 2; kh++)
             for (var kw = 0; kw < 2; kw++)
             {
                 var y = h * 1 - 0 + kh * 1;
                 var x = w * 1 - 0 + kw * 1;
+
                 if (y >= 0 && y < outputHeight && x >= 0 && x < outputWidth)
                     expected[y * outputWidth + x] += value;
             }
@@ -229,13 +235,15 @@ public unsafe class HighLevelNnTests
     {
         TestHelpers.RequireNativeOrIgnore();
 
-        using var pool = new MaxPool2d((2, 2), (2, 2));
+        using var pool = new MaxPool2D((2, 2), (2, 2));
 
         var data = stackalloc float[16];
+
         for (var i = 0; i < 16; i++)
             data[i] = i + 1;
+
         var shape = stackalloc int[] { 1, 4, 4, 1 };
-        var input = MlxArray.NewData(data, shape, 4, MlxDType.MLX_FLOAT32);
+        var input = MlxArray.NewData(data, shape, 4, MlxDType.MlxFloat32);
 
         var output = pool.Forward(input);
         TestHelpers.Ok(MlxArray.Eval(output), "eval");
@@ -256,11 +264,11 @@ public unsafe class HighLevelNnTests
     {
         TestHelpers.RequireNativeOrIgnore();
 
-        using var pool = new AvgPool1d(2, 2);
+        using var pool = new AvgPool1D(2, 2);
 
         var data = stackalloc float[] { 2f, 4f, 6f, 8f };
         var shape = stackalloc int[] { 1, 4, 1 };
-        var input = MlxArray.NewData(data, shape, 3, MlxDType.MLX_FLOAT32);
+        var input = MlxArray.NewData(data, shape, 3, MlxDType.MlxFloat32);
 
         var output = pool.Forward(input);
         TestHelpers.Ok(MlxArray.Eval(output), "eval");
@@ -279,8 +287,8 @@ public unsafe class HighLevelNnTests
 
         var data = stackalloc float[] { 1f, 2f, 3f };
         var shape = stackalloc int[] { 3 };
-        var predictions = MlxArray.NewData(data, shape, 1, MlxDType.MLX_FLOAT32);
-        var targets = MlxArray.NewData(data, shape, 1, MlxDType.MLX_FLOAT32);
+        var predictions = MlxArray.NewData(data, shape, 1, MlxDType.MlxFloat32);
+        var targets = MlxArray.NewData(data, shape, 1, MlxDType.MlxFloat32);
 
         var loss = Losses.MseLoss(predictions, targets, LossReduction.Sum);
         TestHelpers.Ok(MlxArray.Eval(loss), "eval");
@@ -300,11 +308,11 @@ public unsafe class HighLevelNnTests
 
         var logitsData = stackalloc float[] { 0f, 0f };
         var logitsShape = stackalloc int[] { 1, 2 };
-        var logits = MlxArray.NewData(logitsData, logitsShape, 2, MlxDType.MLX_FLOAT32);
+        var logits = MlxArray.NewData(logitsData, logitsShape, 2, MlxDType.MlxFloat32);
 
         var targetsData = stackalloc int[] { 0 };
         var targetsShape = stackalloc int[] { 1 };
-        var targets = MlxArray.NewData(targetsData, targetsShape, 1, MlxDType.MLX_INT32);
+        var targets = MlxArray.NewData(targetsData, targetsShape, 1, MlxDType.MlxInt32);
 
         var loss = Losses.CrossEntropy(logits, targets, reduction: LossReduction.Mean);
         TestHelpers.Ok(MlxArray.Eval(loss), "eval");

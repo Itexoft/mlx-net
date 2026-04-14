@@ -1,8 +1,8 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
-using System;
 using Itexoft.Mlx;
 using Itexoft.Mlx.Nn;
 using NUnit.Framework;
@@ -22,9 +22,11 @@ public unsafe class ArrayOpsRoundtripTests
         var reshapedShape = new[] { 3, 2 };
 
         var original = CreateArray(data, originalShape);
+
         try
         {
             var reshaped = original.Reshape(reshapedShape);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(reshaped), "eval reshape");
@@ -56,10 +58,12 @@ public unsafe class ArrayOpsRoundtripTests
         var status = MlxOps.Transpose(out var transposed, array, TensorUtilities.DefaultStream());
         TestHelpers.Ok(status, "transpose");
         var expected = CreateArray([1f, 3f, 2f, 4f], [2, 2]);
+
         try
         {
             TestHelpers.Ok(MlxArray.Eval(transposed), "eval transpose");
             var diff = transposed.Subtract(expected);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(diff), "eval diff");
@@ -76,6 +80,7 @@ public unsafe class ArrayOpsRoundtripTests
         {
             if (transposed.ctx != 0)
                 MlxArray.Free(transposed);
+
             MlxArray.Free(expected);
             MlxArray.Free(array);
         }
@@ -89,19 +94,24 @@ public unsafe class ArrayOpsRoundtripTests
         var data = new[]
         {
             10f, 20f, 30f,
-            40f, 50f, 60f
+            40f, 50f, 60f,
         };
+
         var shape = new[] { 2, 3 };
         var array = CreateArray(data, shape);
+
         var indicesValues = new[]
         {
             2, 1, 0,
-            0, 2, 1
+            0, 2, 1,
         };
+
         var indices = CreateIntArray(indicesValues, shape);
+
         try
         {
             var gathered = array.TakeAlong(indices, 1);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(gathered), "eval take_along");
@@ -125,17 +135,13 @@ public unsafe class ArrayOpsRoundtripTests
     {
         fixed (float* data = values)
         fixed (int* dims = shape)
-        {
-            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MLX_FLOAT32);
-        }
+            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MlxFloat32);
     }
 
     private static MlxArrayHandle CreateIntArray(int[] values, int[] shape)
     {
         fixed (int* data = values)
         fixed (int* dims = shape)
-        {
-            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MLX_INT32);
-        }
+            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MlxInt32);
     }
 }

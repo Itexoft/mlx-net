@@ -1,10 +1,9 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
 using System;
-using System.Collections.Generic;
-using Itexoft.Mlx;
 
 namespace Itexoft.Mlx.Nn;
 
@@ -13,10 +12,10 @@ namespace Itexoft.Mlx.Nn;
 /// </summary>
 public sealed class Rnn : Module
 {
-    private readonly ModuleParameter wxh;
-    private readonly ModuleParameter whh;
     private readonly ModuleParameter? bias;
     private readonly Func<MlxArrayHandle, MlxArrayHandle> nonLinearity;
+    private readonly ModuleParameter whh;
+    private readonly ModuleParameter wxh;
 
     public Rnn(int inputSize, int hiddenSize, bool bias = true, Func<MlxArrayHandle, MlxArrayHandle>? nonLinearity = null)
     {
@@ -25,6 +24,7 @@ public sealed class Rnn : Module
         var scale = 1f / MathF.Sqrt(hiddenSize);
         this.wxh = this.RegisterParameter("wxh", TensorFactory.Uniform(-scale, scale, [hiddenSize, inputSize]));
         this.whh = this.RegisterParameter("whh", TensorFactory.Uniform(-scale, scale, [hiddenSize, hiddenSize]));
+
         if (bias)
             this.bias = this.RegisterParameter("bias", TensorFactory.Uniform(-scale, scale, [hiddenSize]));
     }
@@ -42,7 +42,7 @@ public sealed class Rnn : Module
         var timeAxis = projected.Rank() - 2;
         var steps = projected.Dim(timeAxis);
 
-        var outputs = new List<MlxArrayHandle>(steps);
+        var outputs = new MlxArrayHandle[steps];
         var hasHidden = hidden.HasValue;
         var previousHidden = hidden;
 
@@ -62,7 +62,7 @@ public sealed class Rnn : Module
             var activated = this.nonLinearity(xStep);
             MlxArray.Free(xStep);
 
-            outputs.Add(activated);
+            outputs[index] = activated;
             previousHidden = activated;
             hasHidden = true;
         }
@@ -71,6 +71,7 @@ public sealed class Rnn : Module
         MlxArray.Free(whhT);
 
         var stacked = outputs.Stack(timeAxis);
+
         foreach (var h in outputs)
             MlxArray.Free(h);
 
@@ -83,45 +84,46 @@ public sealed class Rnn : Module
 /// </summary>
 public sealed class Gru : Module
 {
-    private readonly int _hiddenSize;
-    private readonly ModuleParameter _wx;
-    private readonly ModuleParameter _wh;
-    private readonly ModuleParameter? _bias;
-    private readonly ModuleParameter? _bhn;
+    private readonly ModuleParameter? bhn;
+    private readonly ModuleParameter? bias;
+    private readonly int hiddenSize;
+    private readonly ModuleParameter wh;
+    private readonly ModuleParameter wx;
 
     public Gru(int inputSize, int hiddenSize, bool bias = true)
     {
-        this._hiddenSize = hiddenSize;
+        this.hiddenSize = hiddenSize;
         var scale = 1f / MathF.Sqrt(hiddenSize);
-        this._wx = this.RegisterParameter("wx", TensorFactory.Uniform(-scale, scale, [3 * hiddenSize, inputSize]));
-        this._wh = this.RegisterParameter("wh", TensorFactory.Uniform(-scale, scale, [3 * hiddenSize, hiddenSize]));
+        this.wx = this.RegisterParameter("wx", TensorFactory.Uniform(-scale, scale, [3 * hiddenSize, inputSize]));
+        this.wh = this.RegisterParameter("wh", TensorFactory.Uniform(-scale, scale, [3 * hiddenSize, hiddenSize]));
+
         if (bias)
         {
-            this._bias = this.RegisterParameter("bias", TensorFactory.Uniform(-scale, scale, [3 * hiddenSize]));
-            this._bhn = this.RegisterParameter("bias_hidden", TensorFactory.Uniform(-scale, scale, [hiddenSize]));
+            this.bias = this.RegisterParameter("bias", TensorFactory.Uniform(-scale, scale, [3 * hiddenSize]));
+            this.bhn = this.RegisterParameter("bias_hidden", TensorFactory.Uniform(-scale, scale, [hiddenSize]));
         }
     }
 
     public MlxArrayHandle Forward(MlxArrayHandle input, MlxArrayHandle? hidden = null)
     {
-        var wxT = this._wx.Value.Transpose();
+        var wxT = this.wx.Value.Transpose();
         var projected = input.Matmul(wxT);
         MlxArray.Free(wxT);
 
-        projected = RecurrentHelpers.AddBiasIfNeeded(projected, this._bias);
+        projected = RecurrentHelpers.AddBiasIfNeeded(projected, this.bias);
 
         var lastAxis = projected.Rank() - 1;
         var total = projected.Dim(lastAxis);
-        var xRz = projected.Slice(lastAxis, 0, total - this._hiddenSize);
-        var xN = projected.Slice(lastAxis, total - this._hiddenSize, total);
+        var xRz = projected.Slice(lastAxis, 0, total - this.hiddenSize);
+        var xN = projected.Slice(lastAxis, total - this.hiddenSize, total);
         MlxArray.Free(projected);
 
-        var whT = this._wh.Value.Transpose();
+        var whT = this.wh.Value.Transpose();
 
         var timeAxis = xRz.Rank() - 2;
         var steps = xRz.Dim(timeAxis);
 
-        var outputs = new List<MlxArrayHandle>(steps);
+        var outputs = new MlxArrayHandle[steps];
         var hasHidden = hidden.HasValue;
         var currentHidden = hidden;
 
@@ -135,8 +137,8 @@ public sealed class Gru : Module
             if (hasHidden)
             {
                 var hProj = currentHidden!.Value.Matmul(whT);
-                var hProjRz = hProj.Slice(hProj.Rank() - 1, 0, 2 * this._hiddenSize);
-                projN = hProj.Slice(hProj.Rank() - 1, 2 * this._hiddenSize, 3 * this._hiddenSize);
+                var hProjRz = hProj.Slice(hProj.Rank() - 1, 0, 2 * this.hiddenSize);
+                projN = hProj.Slice(hProj.Rank() - 1, 2 * this.hiddenSize, 3 * this.hiddenSize);
                 MlxArray.Free(hProj);
 
                 var rzSum = rzInput.Add(hProjRz);
@@ -144,9 +146,9 @@ public sealed class Gru : Module
                 MlxArray.Free(hProjRz);
                 rzInput = rzSum;
 
-                if (this._bhn is not null)
+                if (this.bhn is not null)
                 {
-                    var broadcast = RecurrentHelpers.BroadcastBias(this._bhn.Value, projN.Value.Shape());
+                    var broadcast = RecurrentHelpers.BroadcastBias(this.bhn.Value, projN.Value.ShapeSpan());
                     var withBias = projN.Value.Add(broadcast);
                     MlxArray.Free(projN.Value);
                     MlxArray.Free(broadcast);
@@ -176,6 +178,7 @@ public sealed class Gru : Module
             MlxArray.Free(nInput);
 
             MlxArrayHandle newHidden;
+
             if (hasHidden)
             {
                 var one = TensorFactory.ScalarLike(z, 1f);
@@ -200,7 +203,7 @@ public sealed class Gru : Module
 
             MlxArray.Free(nActivated);
 
-            outputs.Add(newHidden);
+            outputs[index] = newHidden;
             currentHidden = newHidden;
             hasHidden = true;
 
@@ -213,6 +216,7 @@ public sealed class Gru : Module
         MlxArray.Free(whT);
 
         var stacked = outputs.Stack(timeAxis);
+
         foreach (var h in outputs)
             MlxArray.Free(h);
 
@@ -225,37 +229,35 @@ public sealed class Gru : Module
 /// </summary>
 public sealed class Lstm : Module
 {
-    private readonly ModuleParameter _wx;
-    private readonly ModuleParameter _wh;
-    private readonly ModuleParameter? _bias;
+    private readonly ModuleParameter? bias;
+    private readonly ModuleParameter wh;
+    private readonly ModuleParameter wx;
 
     public Lstm(int inputSize, int hiddenSize, bool bias = true)
     {
         var scale = 1f / MathF.Sqrt(hiddenSize);
-        this._wx = this.RegisterParameter("wx", TensorFactory.Uniform(-scale, scale, [4 * hiddenSize, inputSize]));
-        this._wh = this.RegisterParameter("wh", TensorFactory.Uniform(-scale, scale, [4 * hiddenSize, hiddenSize]));
+        this.wx = this.RegisterParameter("wx", TensorFactory.Uniform(-scale, scale, [4 * hiddenSize, inputSize]));
+        this.wh = this.RegisterParameter("wh", TensorFactory.Uniform(-scale, scale, [4 * hiddenSize, hiddenSize]));
+
         if (bias)
-            this._bias = this.RegisterParameter("bias", TensorFactory.Uniform(-scale, scale, [4 * hiddenSize]));
+            this.bias = this.RegisterParameter("bias", TensorFactory.Uniform(-scale, scale, [4 * hiddenSize]));
     }
 
-    public (MlxArrayHandle Hidden, MlxArrayHandle Cell) Forward(
-        MlxArrayHandle input,
-        MlxArrayHandle? hidden = null,
-        MlxArrayHandle? cell = null)
+    public (MlxArrayHandle Hidden, MlxArrayHandle Cell) Forward(MlxArrayHandle input, MlxArrayHandle? hidden = null, MlxArrayHandle? cell = null)
     {
-        var wxT = this._wx.Value.Transpose();
+        var wxT = this.wx.Value.Transpose();
         var projected = input.Matmul(wxT);
         MlxArray.Free(wxT);
 
-        projected = RecurrentHelpers.AddBiasIfNeeded(projected, this._bias);
+        projected = RecurrentHelpers.AddBiasIfNeeded(projected, this.bias);
 
-        var whT = this._wh.Value.Transpose();
+        var whT = this.wh.Value.Transpose();
 
         var timeAxis = projected.Rank() - 2;
         var steps = projected.Dim(timeAxis);
 
-        var hiddenStates = new List<MlxArrayHandle>(steps);
-        var cellStates = new List<MlxArrayHandle>(steps);
+        var hiddenStates = new MlxArrayHandle[steps];
+        var cellStates = new MlxArrayHandle[steps];
 
         var hasHidden = hidden.HasValue;
         var currentHidden = hidden;
@@ -264,6 +266,7 @@ public sealed class Lstm : Module
         for (var index = 0; index < steps; index++)
         {
             var ifgo = RecurrentHelpers.ExtractTimeStep(projected, timeAxis, index);
+
             if (hasHidden)
             {
                 var mat = currentHidden!.Value.Matmul(whT);
@@ -287,6 +290,7 @@ public sealed class Lstm : Module
             MlxArray.Free(gates[3]);
 
             MlxArrayHandle newCell;
+
             if (currentCell.HasValue)
             {
                 var forget = f.Multiply(currentCell.Value);
@@ -296,9 +300,7 @@ public sealed class Lstm : Module
                 MlxArray.Free(inputGate);
             }
             else
-            {
                 newCell = i.Multiply(g);
-            }
 
             var tanhCell = newCell.Tanh();
             var newHidden = o.Multiply(tanhCell);
@@ -309,8 +311,8 @@ public sealed class Lstm : Module
             MlxArray.Free(g);
             MlxArray.Free(o);
 
-            hiddenStates.Add(newHidden);
-            cellStates.Add(newCell);
+            hiddenStates[index] = newHidden;
+            cellStates[index] = newCell;
 
             currentHidden = newHidden;
             currentCell = newCell;
@@ -325,6 +327,7 @@ public sealed class Lstm : Module
 
         foreach (var h in hiddenStates)
             MlxArray.Free(h);
+
         foreach (var c in cellStates)
             MlxArray.Free(c);
 
@@ -339,8 +342,7 @@ internal static class RecurrentHelpers
         if (bias is null)
             return array;
 
-        var targetShape = array.Shape();
-        var broadcast = BroadcastBias(bias.Value, targetShape);
+        var broadcast = BroadcastBias(bias.Value, array.ShapeSpan());
         var result = array.Add(broadcast);
         MlxArray.Free(array);
         MlxArray.Free(broadcast);
@@ -348,20 +350,26 @@ internal static class RecurrentHelpers
         return result;
     }
 
-    internal static MlxArrayHandle BroadcastBias(MlxArrayHandle bias, int[] targetShape)
+    internal static MlxArrayHandle BroadcastBias(MlxArrayHandle bias, ReadOnlySpan<int> targetShape)
     {
-        var temporaries = new List<MlxArrayHandle>();
         var handle = bias;
+        MlxArrayHandle temporary = default;
+
         for (var i = 0; i < targetShape.Length - 1; i++)
         {
             var expanded = handle.ExpandedDimension(0);
-            temporaries.Add(expanded);
+
+            if (!TensorUtilities.IsNull(temporary))
+                MlxArray.Free(temporary);
+
+            temporary = expanded;
             handle = expanded;
         }
 
         var broadcast = handle.BroadcastTo(targetShape);
-        foreach (var temp in temporaries)
-            MlxArray.Free(temp);
+
+        if (!TensorUtilities.IsNull(temporary))
+            MlxArray.Free(temporary);
 
         return broadcast;
     }

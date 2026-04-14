@@ -1,14 +1,14 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
-using NUnit.Framework;
 using Itexoft.Mlx;
+using NUnit.Framework;
 using MemStream = TestHelpers.MemStream;
 
 [TestFixture]
@@ -16,18 +16,19 @@ public unsafe class ExampleTests
 {
     private struct BogusPayload
     {
-        public MlxArrayHandle value;
-        public fixed byte error[256];
+        public MlxArrayHandle Value;
+        public fixed byte Error[256];
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static sbyte* MemLabel(void* desc)
     {
         var ms = (MemStream*)desc;
-        if (ms->label == 0)
-            ms->label = Marshal.StringToHGlobalAnsi("<mem>");
 
-        return (sbyte*)ms->label;
+        if (ms->Label == 0)
+            ms->Label = Marshal.StringToHGlobalAnsi("<mem>");
+
+        return (sbyte*)ms->Label;
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
@@ -35,28 +36,31 @@ public unsafe class ExampleTests
     {
         if (desc == null)
             return 0;
+
         var m = (MemStream*)desc;
 
-        return (byte)(m->err == 0 ? 1 : 0);
+        return (byte)(m->Err == 0 ? 1 : 0);
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void MemSeek(void* desc, long off, int whence)
     {
         var m = (MemStream*)desc;
-        var size = (long)m->size;
-        var cur = (long)m->pos;
+        var size = (long)m->Size;
+        var cur = (long)m->Pos;
+
         var np = whence switch
         {
             0 => off,
             1 => cur + off,
             2 => size + off,
-            _ => cur
+            _ => cur,
         };
+
         if (np < 0 || np > size)
-            m->err = 1;
+            m->Err = 1;
         else
-            m->pos = (nuint)np;
+            m->Pos = (nuint)np;
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
@@ -66,16 +70,18 @@ public unsafe class ExampleTests
 
         if (n == 0)
             return;
-        if (n > m->size || m->pos > m->size - n)
+
+        if (n > m->Size || m->Pos > m->Size - n)
         {
-            m->err = 1;
+            m->Err = 1;
 
             return;
         }
 
         for (nuint i = 0; i < n; i++)
-            data[i] = (sbyte)m->data[m->pos + i];
-        m->pos += n;
+            data[i] = (sbyte)m->Data[m->Pos + i];
+
+        m->Pos += n;
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
@@ -85,15 +91,16 @@ public unsafe class ExampleTests
 
         if (n == 0)
             return;
-        if (off > m->size || n > m->size - off)
+
+        if (off > m->Size || n > m->Size - off)
         {
-            m->err = 1;
+            m->Err = 1;
 
             return;
         }
 
         for (nuint i = 0; i < n; i++)
-            data[i] = (sbyte)m->data[off + i];
+            data[i] = (sbyte)m->Data[off + i];
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
@@ -103,32 +110,34 @@ public unsafe class ExampleTests
 
         if (n == 0)
             return;
-        if (n > m->size || m->pos > m->size - n)
+
+        if (n > m->Size || m->Pos > m->Size - n)
         {
-            m->err = 1;
+            m->Err = 1;
 
             return;
         }
 
         for (nuint i = 0; i < n; i++)
-            m->data[m->pos + i] = (byte)data[i];
-        m->pos += n;
+            m->Data[m->Pos + i] = (byte)data[i];
+
+        m->Pos += n;
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void MemFree(void* desc)
     {
         var m = (MemStream*)desc;
-        if (m->free_data != 0 && m->data != null)
-            NativeMemory.Free(m->data);
-    }
 
+        if (m->FreeData != 0 && m->Data != null)
+            NativeMemory.Free(m->Data);
+    }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static byte MemIsOpen(void* desc) => (byte)(desc != null ? 1 : 0);
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static nuint MemTell(void* desc) => ((MemStream*)desc)->pos;
+    private static nuint MemTell(void* desc) => ((MemStream*)desc)->Pos;
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static int IncFunPayload(MlxVectorArrayHandle* vres, MlxVectorArrayHandle input, void* payload)
@@ -140,6 +149,7 @@ public unsafe class ExampleTests
 
         if (rc0 != 0)
             return rc0;
+
         var rc1 = MlxVector.ArraySetValue(ref *vres, res);
         MlxArray.Free(src);
         MlxArray.Free(res);
@@ -157,6 +167,7 @@ public unsafe class ExampleTests
 
         if (rc != 0)
             return rc;
+
         *res = tmp;
 
         return 0;
@@ -172,6 +183,7 @@ public unsafe class ExampleTests
 
         if (rc0 != 0)
             return rc0;
+
         var rc1 = MlxVector.ArraySetValue(ref *vres, res);
         MlxArray.Free(src);
         MlxArray.Free(res);
@@ -185,8 +197,10 @@ public unsafe class ExampleTests
 
         if (rc0 != 0)
             return 0;
+
         var rc1 = MlxOps.Any(out var any, tmp, false, s);
         MlxArray.Free(tmp);
+
         if (rc1 != 0)
         {
             MlxArray.Free(any);
@@ -205,18 +219,22 @@ public unsafe class ExampleTests
     {
         var payload = (BogusPayload*)payloadPtr;
         var s = TestHelpers.CpuStream();
-        if (HasNan(payload->value, s) != 0)
+
+        if (HasNan(payload->Value, s) != 0)
         {
             var msg = "nan detected";
+
             for (var i = 0; i < msg.Length; i++)
-                payload->error[i] = (byte)msg[i];
-            payload->error[msg.Length] = 0;
+                payload->Error[i] = (byte)msg[i];
+
+            payload->Error[msg.Length] = 0;
 
             return 1;
         }
 
         MlxVector.ArrayGet(out var src, input, 0);
-        var rc0 = MlxOps.Add(out var res, src, payload->value, s);
+        var rc0 = MlxOps.Add(out var res, src, payload->Value, s);
+
         if (rc0 != 0)
         {
             MlxArray.Free(src);
@@ -241,17 +259,18 @@ public unsafe class ExampleTests
         var s = TestHelpers.CpuStream();
         var data = new[] { 1f, 2f, 3f, 4f, 5f, 6f };
         var shape = new[] { 2, 3 };
+
         fixed (float* pd = data)
         fixed (int* ps = shape)
         {
-            var arr = MlxArray.NewData(pd, ps, shape.Length, MlxDType.MLX_FLOAT32);
+            var arr = MlxArray.NewData(pd, ps, shape.Length, MlxDType.MlxFloat32);
             var two = MlxArray.NewInt(2);
             TestHelpers.Ok(MlxOps.Divide(out var divided, arr, two, s), "divide");
             TestHelpers.Ok(MlxArray.Eval(divided), "eval");
             var dv = TestHelpers.ToFloat32(divided);
             Assert.That(dv[0], Is.EqualTo(0.5f).Within(1e-6));
             Assert.That(dv[5], Is.EqualTo(3f).Within(1e-6));
-            TestHelpers.Ok(MlxOps.Arange(out var ranged, 0, 3, 0.5, MlxDType.MLX_FLOAT32, s), "arange");
+            TestHelpers.Ok(MlxOps.Arange(out var ranged, 0, 3, 0.5, MlxDType.MlxFloat32, s), "arange");
             TestHelpers.Ok(MlxArray.Eval(ranged), "eval");
             var rv = TestHelpers.ToFloat32(ranged);
             Assert.That(rv[0], Is.EqualTo(0f).Within(1e-6));
@@ -270,10 +289,11 @@ public unsafe class ExampleTests
         var s = TestHelpers.CpuStream();
         var data = new[] { 1d, 2d, 3d, 4d, 5d, 6d };
         var shape = new[] { 2, 3 };
+
         fixed (double* pd = data)
         fixed (int* ps = shape)
         {
-            var arr = MlxArray.NewData(pd, ps, shape.Length, MlxDType.MLX_FLOAT64);
+            var arr = MlxArray.NewData(pd, ps, shape.Length, MlxDType.MlxFloat64);
             var three = MlxArray.NewFloat64(3d);
             TestHelpers.Ok(MlxOps.Multiply(out var multiplied, arr, three, s), "multiply");
             var two = MlxArray.NewInt(2);
@@ -281,7 +301,7 @@ public unsafe class ExampleTests
             TestHelpers.Ok(MlxArray.Eval(divided), "eval");
             var dv = TestHelpers.ToFloat64(divided);
             Assert.That(dv[0], Is.EqualTo(1.5d).Within(1e-6));
-            TestHelpers.Ok(MlxOps.Arange(out var ranged, 0, 3, 0.5, MlxDType.MLX_FLOAT64, s), "arange");
+            TestHelpers.Ok(MlxOps.Arange(out var ranged, 0, 3, 0.5, MlxDType.MlxFloat64, s), "arange");
             TestHelpers.Ok(MlxArray.Eval(ranged), "eval");
             var rv = TestHelpers.ToFloat64(ranged);
             Assert.That(rv[0], Is.EqualTo(0d).Within(1e-6));
@@ -398,29 +418,33 @@ public unsafe class ExampleTests
         var x = MlxArray.NewFloat(1f);
         var vx = MlxVector.ArrayNewValue(x);
         BogusPayload payload = default;
-        payload.value = MlxArray.NewFloat(2f);
+        payload.Value = MlxArray.NewFloat(2f);
         var cls = MlxClosure.NewFuncPayload(&IncFunBogus, &payload, (delegate* unmanaged[Cdecl]<void*, void>)0);
         TestHelpers.Ok(MlxClosure.Apply(out var vout, cls, vx), "apply");
         MlxVector.ArrayGet(out var y, vout, 0);
         TestHelpers.Ok(MlxArray.Eval(y), "eval");
         var arr = TestHelpers.ToFloat32(y);
         Assert.That(arr[0], Is.EqualTo(3f).Within(1e-6));
-        MlxArray.SetFloat(ref payload.value, float.NaN);
+        MlxArray.SetFloat(ref payload.Value, float.NaN);
         MlxError.SetErrorHandler(&ErrorHandler, null, null);
         var rc1 = MlxClosure.Apply(out var vout2, cls, vx);
         Assert.That(rc1, Is.Not.EqualTo(0));
+
         if (rc1 == 0)
             MlxVector.ArrayFree(vout2);
+
         MlxError.SetErrorHandler(null, null, null);
         var bytes = new byte[256];
         var end = 0;
-        for (; end < 256 && payload.error[end] != 0; end++)
-            bytes[end] = payload.error[end];
+
+        for (; end < 256 && payload.Error[end] != 0; end++)
+            bytes[end] = payload.Error[end];
+
         var msg = Encoding.UTF8.GetString(bytes, 0, end);
         Assert.That(msg, Is.EqualTo("nan detected"));
         MlxArray.Free(x);
         MlxArray.Free(y);
-        MlxArray.Free(payload.value);
+        MlxArray.Free(payload.Value);
         MlxVector.ArrayFree(vx);
         MlxVector.ArrayFree(vout);
         MlxClosure.Free(cls);
@@ -463,26 +487,29 @@ public unsafe class ExampleTests
     }
 
     [Test]
-    public void SafetensorsMemoryIO()
+    public void SafetensorsMemoryIo()
     {
         TestHelpers.RequireNativeOrIgnore();
         var file = Path.GetTempFileName();
+
         try
         {
             TestHelpers.WithStream(stream =>
             {
                 var seed = MlxMap.StringToArrayNew();
                 var metaSeed = MlxMap.StringToStringNew();
+
                 try
                 {
                     var data = new[] { 1f, 2f, 3f, 4f };
+
                     TestHelpers.WithShape(
                         [2, 2],
                         (shapePtr, rank) =>
                         {
                             var scratch = stackalloc float[data.Length];
                             TestHelpers.Copy(data, scratch);
-                            var tensor = MlxArray.NewData(scratch, shapePtr, (int)rank, MlxDType.MLX_FLOAT32);
+                            var tensor = MlxArray.NewData(scratch, shapePtr, (int)rank, MlxDType.MlxFloat32);
                             MlxMap.StringToArrayInsert(seed, "a", tensor);
                             MlxArray.Free(tensor);
                         });
@@ -491,6 +518,7 @@ public unsafe class ExampleTests
                     File.WriteAllBytes(file, bytesSeed);
 
                     TestHelpers.Ok(MlxIo.LoadSafetensors(out var diskData, out var diskMeta, file, stream), "load_disk");
+
                     try
                     {
                         var originals = TestHelpers.SnapshotTensors(diskData);
@@ -522,6 +550,7 @@ public unsafe class ExampleTests
     {
         TestHelpers.RequireNativeOrIgnore();
         MlxStreamHandle s;
+
         try
         {
             s = MlxStream.DefaultGpuStreamNew();
@@ -535,10 +564,11 @@ public unsafe class ExampleTests
 
         var data = new[] { 0f, 1f, 2f, 3f };
         var shape = new[] { 4 };
+
         fixed (float* pd = data)
         fixed (int* ps = shape)
         {
-            var input = MlxArray.NewData(pd, ps, shape.Length, MlxDType.MLX_FLOAT32);
+            var input = MlxArray.NewData(pd, ps, shape.Length, MlxDType.MlxFloat32);
             TestHelpers.Ok(MlxOps.Exp(out var expected, input, s), "exp");
             TestHelpers.Ok(MlxArray.Eval(expected), "eval");
             var inNames = MlxVector.StringNewValue("inp");
@@ -546,18 +576,20 @@ public unsafe class ExampleTests
             const string source = "uint elem = thread_position_in_grid.x; T tmp = inp[elem]; out[elem] = metal::exp(tmp);";
             var kernel = MlxFast.MetalKernelNew("myexp", inNames, outNames, source, "", true, false);
             var config = MlxFast.MetalKernelConfigNew();
-            MlxFast.MetalKernelConfigAddTemplateArgDType(config, "T", MlxDType.MLX_FLOAT32);
+            MlxFast.MetalKernelConfigAddTemplateArgDType(config, "T", MlxDType.MlxFloat32);
             MlxFast.MetalKernelConfigSetGrid(config, data.Length, 1, 1);
             MlxFast.MetalKernelConfigSetThreadGroup(config, 256, 1, 1);
-            MlxFast.MetalKernelConfigAddOutputArg(config, ps, (nuint)shape.Length, MlxDType.MLX_FLOAT32);
+            MlxFast.MetalKernelConfigAddOutputArg(config, ps, (nuint)shape.Length, MlxDType.MlxFloat32);
             var inputs = MlxVector.ArrayNewValue(input);
             TestHelpers.Ok(MlxFast.MetalKernelApply(out var outputs, kernel, inputs, config, s), "metal_apply");
             MlxVector.ArrayGet(out var actual, outputs, 0);
             TestHelpers.Ok(MlxArray.Eval(actual), "eval");
             var ev = TestHelpers.ToFloat32(expected);
             var av = TestHelpers.ToFloat32(actual);
+
             for (var i = 0; i < ev.Length; i++)
                 Assert.That(av[i], Is.EqualTo(ev[i]).Within(1e-6));
+
             MlxArray.Free(input);
             MlxArray.Free(expected);
             MlxArray.Free(actual);

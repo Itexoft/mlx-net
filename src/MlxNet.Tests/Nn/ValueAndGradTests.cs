@@ -1,11 +1,8 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
-using System;
-using System.Linq;
-using Itexoft.Mlx;
-using Itexoft.Mlx.Nn;
 using NUnit.Framework;
 
 namespace Itexoft.Mlx.Nn.Tests;
@@ -48,6 +45,7 @@ public sealed class ValueAndGradTests
             var result = closure(linear, input, target);
             var lossHandle = result.Item1;
             var gradients = result.Item2;
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(lossHandle), "eval loss");
@@ -73,6 +71,7 @@ public sealed class ValueAndGradTests
                 foreach (var kv in gradients)
                 {
                     var entry = kv.Value;
+
                     if (entry.Value.ctx != 0)
                         MlxArray.Free(entry.Value);
                 }
@@ -92,8 +91,6 @@ public sealed class ValueAndGradTests
     {
         fixed (float* data = values)
         fixed (int* dims = shape)
-        {
-            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MLX_FLOAT32);
-        }
+            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MlxFloat32);
     }
 }

@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -12,17 +13,46 @@ namespace Itexoft.Mlx.Nn;
 /// </summary>
 public abstract class Module : IDisposable
 {
-    private readonly Dictionary<string, ModuleParameter> _parameters = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, ModuleBuffer> _buffers = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, Module> _submodules = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ModuleBuffer> buffers = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ModuleParameter> parameters = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Module> submodules = new(StringComparer.Ordinal);
+    private bool disposed;
 
     private bool training = true;
-    private bool disposed;
 
     /// <summary>
     /// Gets a value indicating whether the module is in training mode.
     /// </summary>
     public bool Training => this.training;
+
+    /// <summary>
+    /// Enumerates child modules that were explicitly registered via <see cref="RegisterModule{TModule}(string, TModule)" />.
+    /// </summary>
+    public IReadOnlyDictionary<string, Module> Children => this.submodules;
+
+    /// <inheritdoc />
+    public virtual void Dispose()
+    {
+        if (this.disposed)
+            return;
+
+        foreach (var parameter in this.parameters.Values)
+            parameter.Dispose();
+
+        this.parameters.Clear();
+
+        foreach (var buffer in this.buffers.Values)
+            buffer.Dispose();
+
+        this.buffers.Clear();
+
+        foreach (var module in this.submodules.Values)
+            module.Dispose();
+
+        this.submodules.Clear();
+
+        this.disposed = true;
+    }
 
     /// <summary>
     /// Marks the module as training or evaluation and cascades to all registered children.
@@ -35,7 +65,7 @@ public abstract class Module : IDisposable
         this.training = mode;
         this.DidSetTrain(mode);
 
-        foreach (var child in this._submodules.Values)
+        foreach (var child in this.submodules.Values)
             child.Train(mode);
     }
 
@@ -45,7 +75,7 @@ public abstract class Module : IDisposable
     public void Eval() => this.Train(false);
 
     /// <summary>
-    /// Called when <see cref="Training"/> is updated.
+    /// Called when <see cref="Training" /> is updated.
     /// </summary>
     /// <param name="mode">The new training flag.</param>
     protected virtual void DidSetTrain(bool mode) { }
@@ -60,11 +90,11 @@ public abstract class Module : IDisposable
     {
         this.EnsureNotDisposed();
 
-        if (this._parameters.ContainsKey(name))
+        if (this.parameters.ContainsKey(name))
             throw new InvalidOperationException($"Parameter '{name}' is already registered on module '{this.GetType().Name}'.");
 
         var parameter = new ModuleParameter(name, value, trainable);
-        this._parameters[name] = parameter;
+        this.parameters[name] = parameter;
 
         return parameter;
     }
@@ -76,11 +106,11 @@ public abstract class Module : IDisposable
     {
         this.EnsureNotDisposed();
 
-        if (this._buffers.ContainsKey(name))
+        if (this.buffers.ContainsKey(name))
             throw new InvalidOperationException($"Buffer '{name}' is already registered on module '{this.GetType().Name}'.");
 
         var buffer = new ModuleBuffer(name, value);
-        this._buffers[name] = buffer;
+        this.buffers[name] = buffer;
 
         return buffer;
     }
@@ -91,25 +121,19 @@ public abstract class Module : IDisposable
     /// <typeparam name="TModule">Type of the child module.</typeparam>
     /// <param name="name">Local identifier for the child.</param>
     /// <param name="module">Module instance to register.</param>
-    /// <returns>The provided <paramref name="module"/>.</returns>
-    protected TModule RegisterModule<TModule>(string name, TModule module)
-        where TModule : Module
+    /// <returns>The provided <paramref name="module" />.</returns>
+    protected TModule RegisterModule<TModule>(string name, TModule module) where TModule : Module
     {
         this.EnsureNotDisposed();
 
-        if (this._submodules.ContainsKey(name))
+        if (this.submodules.ContainsKey(name))
             throw new InvalidOperationException($"Submodule '{name}' is already registered on module '{this.GetType().Name}'.");
 
-        this._submodules[name] = module ?? throw new ArgumentNullException(nameof(module));
+        this.submodules[name] = module ?? throw new ArgumentNullException(nameof(module));
         module.Train(this.training);
 
         return module;
     }
-
-    /// <summary>
-    /// Enumerates child modules that were explicitly registered via <see cref="RegisterModule{TModule}(string, TModule)"/>.
-    /// </summary>
-    public IReadOnlyDictionary<string, Module> Children => this._submodules;
 
     /// <summary>
     /// Returns all descendant modules keyed by their dotted path.
@@ -121,17 +145,17 @@ public abstract class Module : IDisposable
         if (includeSelf)
             result[string.Empty] = this;
 
-        void Traverse(Module current, string prefix)
+        void traverse(Module current, string prefix)
         {
-            foreach (var (name, child) in current._submodules)
+            foreach (var (name, child) in current.submodules)
             {
                 var path = string.IsNullOrEmpty(prefix) ? name : $"{prefix}.{name}";
                 result[path] = child;
-                Traverse(child, path);
+                traverse(child, path);
             }
         }
 
-        Traverse(this, string.Empty);
+        traverse(this, string.Empty);
 
         return result;
     }
@@ -143,19 +167,20 @@ public abstract class Module : IDisposable
     {
         var result = new Dictionary<string, Module>(StringComparer.Ordinal);
 
-        void Traverse(Module current, string prefix)
+        void traverse(Module current, string prefix)
         {
-            foreach (var (name, child) in current._submodules)
+            foreach (var (name, child) in current.submodules)
             {
                 var path = string.IsNullOrEmpty(prefix) ? name : $"{prefix}.{name}";
-                if (child._submodules.Count == 0)
+
+                if (child.submodules.Count == 0)
                     result[path] = child;
                 else
-                    Traverse(child, path);
+                    traverse(child, path);
             }
         }
 
-        Traverse(this, string.Empty);
+        traverse(this, string.Empty);
 
         return result;
     }
@@ -164,7 +189,7 @@ public abstract class Module : IDisposable
     /// Returns a flattened collection of all parameters belonging to this module.
     /// </summary>
     /// <param name="recursive">When <c>true</c>, traverses registered submodules.</param>
-    /// <param name="includeFrozen">When <c>false</c>, excludes parameters with <see cref="ModuleParameter.Trainable"/> set to <c>false</c>.</param>
+    /// <param name="includeFrozen">When <c>false</c>, excludes parameters with <see cref="ModuleParameter.Trainable" /> set to <c>false</c>.</param>
     public ParameterCollection Parameters(bool recursive = true, bool includeFrozen = true)
     {
         var result = new ParameterCollection();
@@ -176,12 +201,11 @@ public abstract class Module : IDisposable
     /// <summary>
     /// Returns the subset of parameters that require gradients.
     /// </summary>
-    public ParameterCollection TrainableParameters(bool recursive = true)
-        => this.Parameters(recursive, false);
+    public ParameterCollection TrainableParameters(bool recursive = true) => this.Parameters(recursive, false);
 
     private static void CollectParameters(Module module, ParameterCollection target, string prefix, bool recursive, bool includeFrozen)
     {
-        foreach (var (name, parameter) in module._parameters)
+        foreach (var (name, parameter) in module.parameters)
         {
             if (!includeFrozen && !parameter.Trainable)
                 continue;
@@ -193,7 +217,7 @@ public abstract class Module : IDisposable
         if (!recursive)
             return;
 
-        foreach (var (childName, child) in module._submodules)
+        foreach (var (childName, child) in module.submodules)
         {
             var nextPrefix = string.IsNullOrEmpty(prefix) ? childName : $"{prefix}.{childName}";
             CollectParameters(child, target, nextPrefix, recursive, includeFrozen);
@@ -213,7 +237,7 @@ public abstract class Module : IDisposable
 
     private static void CollectBuffers(Module module, ParameterCollection target, string prefix, bool recursive)
     {
-        foreach (var (name, buffer) in module._buffers)
+        foreach (var (name, buffer) in module.buffers)
         {
             var path = string.IsNullOrEmpty(prefix) ? name : $"{prefix}.{name}";
             target.AddOrUpdate(path, new(buffer.Value, false));
@@ -222,7 +246,7 @@ public abstract class Module : IDisposable
         if (!recursive)
             return;
 
-        foreach (var (childName, child) in module._submodules)
+        foreach (var (childName, child) in module.submodules)
         {
             var nextPrefix = string.IsNullOrEmpty(prefix) ? childName : $"{prefix}.{childName}";
             CollectBuffers(child, target, nextPrefix, recursive);
@@ -240,6 +264,7 @@ public abstract class Module : IDisposable
         this.EnsureNotDisposed();
 
         var map = BuildParameterMap(this, string.Empty);
+
         foreach (var (path, entry) in replacement)
         {
             if (!map.TryGetValue(path, out var parameter))
@@ -255,9 +280,13 @@ public abstract class Module : IDisposable
         }
 
         if (strict)
+        {
             foreach (var path in map.Keys)
+            {
                 if (!replacement.ContainsKey(path))
                     throw new InvalidOperationException($"No replacement value was supplied for parameter '{path}'.");
+            }
+        }
     }
 
     /// <summary>
@@ -268,6 +297,7 @@ public abstract class Module : IDisposable
         this.EnsureNotDisposed();
 
         var map = BuildBufferMap(this, string.Empty);
+
         foreach (var (path, entry) in replacement)
         {
             if (!map.TryGetValue(path, out var buffer))
@@ -282,9 +312,13 @@ public abstract class Module : IDisposable
         }
 
         if (strict)
+        {
             foreach (var path in map.Keys)
+            {
                 if (!replacement.ContainsKey(path))
                     throw new InvalidOperationException($"No replacement value was supplied for buffer '{path}'.");
+            }
+        }
     }
 
     /// <summary>
@@ -295,6 +329,7 @@ public abstract class Module : IDisposable
         this.EnsureNotDisposed();
 
         var map = BuildModulePathMap(this, string.Empty);
+
         foreach (var (path, module) in replacements)
         {
             if (!map.TryGetValue(path, out var entry))
@@ -319,13 +354,13 @@ public abstract class Module : IDisposable
 
     private static void PopulateParameterMap(Module module, string prefix, Dictionary<string, ModuleParameter> result)
     {
-        foreach (var (name, parameter) in module._parameters)
+        foreach (var (name, parameter) in module.parameters)
         {
             var path = string.IsNullOrEmpty(prefix) ? name : $"{prefix}.{name}";
             result[path] = parameter;
         }
 
-        foreach (var (childName, child) in module._submodules)
+        foreach (var (childName, child) in module.submodules)
         {
             var nextPrefix = string.IsNullOrEmpty(prefix) ? childName : $"{prefix}.{childName}";
             PopulateParameterMap(child, nextPrefix, result);
@@ -342,13 +377,13 @@ public abstract class Module : IDisposable
 
     private static void PopulateBufferMap(Module module, string prefix, Dictionary<string, ModuleBuffer> result)
     {
-        foreach (var (name, buffer) in module._buffers)
+        foreach (var (name, buffer) in module.buffers)
         {
             var path = string.IsNullOrEmpty(prefix) ? name : $"{prefix}.{name}";
             result[path] = buffer;
         }
 
-        foreach (var (childName, child) in module._submodules)
+        foreach (var (childName, child) in module.submodules)
         {
             var nextPrefix = string.IsNullOrEmpty(prefix) ? childName : $"{prefix}.{childName}";
             PopulateBufferMap(child, nextPrefix, result);
@@ -359,7 +394,7 @@ public abstract class Module : IDisposable
     /// Marks parameters as frozen (non-trainable).
     /// </summary>
     /// <param name="paths">Optional set of parameter paths. When omitted, all parameters within the module are frozen.</param>
-    /// <param name="recursive">When <c>true</c>, traverses child modules. Ignored when <paramref name="paths"/> are provided.</param>
+    /// <param name="recursive">When <c>true</c>, traverses child modules. Ignored when <paramref name="paths" /> are provided.</param>
     public void Freeze(IEnumerable<string>? paths = null, bool recursive = true)
     {
         this.EnsureNotDisposed();
@@ -385,8 +420,10 @@ public abstract class Module : IDisposable
         }
 
         foreach (var path in paths)
+        {
             if (parameterMap.TryGetValue(path, out var parameter))
                 parameter.Trainable = false;
+        }
     }
 
     /// <summary>
@@ -412,8 +449,10 @@ public abstract class Module : IDisposable
         }
 
         foreach (var path in paths)
+        {
             if (parameterMap.TryGetValue(path, out var parameter))
                 parameter.Trainable = true;
+        }
     }
 
     private void EnsureNotDisposed()
@@ -424,11 +463,11 @@ public abstract class Module : IDisposable
 
     private void ReplaceModule(string name, Module module, bool disposeExisting)
     {
-        if (!this._submodules.TryGetValue(name, out var existing))
+        if (!this.submodules.TryGetValue(name, out var existing))
             throw new KeyNotFoundException($"Module '{name}' is not registered on '{this.GetType().Name}'.");
 
         var replacement = module ?? throw new ArgumentNullException(nameof(module));
-        this._submodules[name] = replacement;
+        this.submodules[name] = replacement;
         replacement.Train(this.training);
 
         if (disposeExisting && !ReferenceEquals(existing, replacement))
@@ -439,7 +478,7 @@ public abstract class Module : IDisposable
     {
         var result = new Dictionary<string, ModulePathEntry>(StringComparer.Ordinal);
 
-        foreach (var (name, child) in module._submodules)
+        foreach (var (name, child) in module.submodules)
         {
             var path = string.IsNullOrEmpty(prefix) ? name : $"{prefix}.{name}";
             result[path] = new(module, name);
@@ -455,29 +494,5 @@ public abstract class Module : IDisposable
     {
         public Module Parent { get; } = parent;
         public string Name { get; } = name;
-    }
-
-    /// <inheritdoc/>
-    public virtual void Dispose()
-    {
-        if (this.disposed)
-            return;
-
-        foreach (var parameter in this._parameters.Values)
-            parameter.Dispose();
-
-        this._parameters.Clear();
-
-        foreach (var buffer in this._buffers.Values)
-            buffer.Dispose();
-
-        this._buffers.Clear();
-
-        foreach (var module in this._submodules.Values)
-            module.Dispose();
-
-        this._submodules.Clear();
-
-        this.disposed = true;
     }
 }

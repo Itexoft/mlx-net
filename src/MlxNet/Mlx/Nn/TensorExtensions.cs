@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -5,8 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using Itexoft.Mlx;
 
 namespace Itexoft.Mlx.Nn;
 
@@ -19,22 +18,17 @@ public static unsafe class TensorExtensions
     /// Returns the number of dimensions of the tensor.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static int Rank(this MlxArrayHandle array)
-        => (int)MlxArray.Ndim(array);
+    public static int Rank(this MlxArrayHandle array) => (int)MlxArray.Ndim(array);
 
     /// <summary>
     /// Returns the shape of the tensor.
     /// </summary>
-    public static int[] Shape(this MlxArrayHandle array)
-    {
-        var rank = array.Rank();
-        var pointer = MlxArray.Shape(array);
-        var result = new int[rank];
-        for (var i = 0; i < rank; i++)
-            result[i] = Marshal.ReadInt32((nint)pointer, i * sizeof(int));
+    public static ReadOnlySpan<int> ShapeSpan(this MlxArrayHandle array) => new(MlxArray.Shape(array), array.Rank());
 
-        return result;
-    }
+    /// <summary>
+    /// Returns the shape of the tensor.
+    /// </summary>
+    public static int[] Shape(this MlxArrayHandle array) => array.ShapeSpan().ToArray();
 
     /// <summary>
     /// Returns the size of a specified axis.
@@ -43,23 +37,20 @@ public static unsafe class TensorExtensions
     {
         var rank = array.Rank();
         var normalized = NormalizeAxis(axis, rank);
-        var pointer = MlxArray.Shape(array);
 
-        return Marshal.ReadInt32((nint)pointer, normalized * sizeof(int));
+        return array.ShapeSpan()[normalized];
     }
 
     /// <summary>
     /// Returns the total number of elements.
     /// </summary>
-    public static int Size(this MlxArrayHandle array)
-        => checked((int)MlxArray.Size(array));
+    public static int Size(this MlxArrayHandle array) => checked((int)MlxArray.Size(array));
 
     /// <summary>
     /// Reshapes the tensor without copying.
     /// </summary>
-    public static MlxArrayHandle Reshape(this MlxArrayHandle array, params int[] shape)
+    public static MlxArrayHandle Reshape(this MlxArrayHandle array, ReadOnlySpan<int> shape)
     {
-        ArgumentNullException.ThrowIfNull(shape);
         fixed (int* ptr = shape)
         {
             var status = MlxOps.Reshape(out var result, array, ptr, (nuint)shape.Length, TensorUtilities.DefaultStream());
@@ -67,6 +58,13 @@ public static unsafe class TensorExtensions
 
             return result;
         }
+    }
+
+    public static MlxArrayHandle Reshape(this MlxArrayHandle array, params int[] shape)
+    {
+        ArgumentNullException.ThrowIfNull(shape);
+
+        return array.Reshape(shape.AsSpan());
     }
 
     /// <summary>
@@ -79,10 +77,12 @@ public static unsafe class TensorExtensions
         axis1 = NormalizeAxis(axis1, rank);
 
         Span<int> permutation = stackalloc int[rank];
+
         for (var i = 0; i < rank; i++)
             permutation[i] = i;
 
         (permutation[axis0], permutation[axis1]) = (permutation[axis1], permutation[axis0]);
+
         fixed (int* ptr = permutation)
         {
             var status = MlxOps.TransposeAxes(out var result, array, ptr, (nuint)rank, TensorUtilities.DefaultStream());
@@ -95,10 +95,8 @@ public static unsafe class TensorExtensions
     /// <summary>
     /// Applies a permutation of axes.
     /// </summary>
-    public static MlxArrayHandle Transposed(this MlxArrayHandle array, params int[] axes)
+    public static MlxArrayHandle Transposed(this MlxArrayHandle array, ReadOnlySpan<int> axes)
     {
-        ArgumentNullException.ThrowIfNull(axes);
-
         if (axes.Length != array.Rank())
             throw new ArgumentException("Number of axes must match tensor rank.", nameof(axes));
 
@@ -111,6 +109,13 @@ public static unsafe class TensorExtensions
         }
     }
 
+    public static MlxArrayHandle Transposed(this MlxArrayHandle array, params int[] axes)
+    {
+        ArgumentNullException.ThrowIfNull(axes);
+
+        return array.Transposed(axes.AsSpan());
+    }
+
     /// <summary>
     /// Swaps two axes.
     /// </summary>
@@ -120,9 +125,12 @@ public static unsafe class TensorExtensions
         axis0 = NormalizeAxis(axis0, rank);
         axis1 = NormalizeAxis(axis1, rank);
         Span<int> permutation = stackalloc int[rank];
+
         for (var i = 0; i < rank; i++)
             permutation[i] = i;
+
         (permutation[axis0], permutation[axis1]) = (permutation[axis1], permutation[axis0]);
+
         fixed (int* ptr = permutation)
         {
             var status = MlxOps.TransposeAxes(out var result, array, ptr, (nuint)rank, TensorUtilities.DefaultStream());
@@ -141,12 +149,16 @@ public static unsafe class TensorExtensions
         axis = NormalizeAxis(axis, rank + 1);
 
         Span<int> shape = stackalloc int[rank + 1];
+        var sourceShape = array.ShapeSpan();
         var idx = 0;
+
         for (var i = 0; i < rank + 1; i++)
+        {
             if (i == axis)
                 shape[i] = 1;
             else
-                shape[i] = array.Dim(idx++);
+                shape[i] = sourceShape[idx++];
+        }
 
         fixed (int* ptr = shape)
         {
@@ -160,7 +172,7 @@ public static unsafe class TensorExtensions
     /// <summary>
     /// Removes singleton dimensions.
     /// </summary>
-    public static MlxArrayHandle Squeezed(this MlxArrayHandle array, params int[] axes)
+    public static MlxArrayHandle Squeezed(this MlxArrayHandle array, ReadOnlySpan<int> axes)
     {
         if (axes is { Length: > 0 })
         {
@@ -172,7 +184,7 @@ public static unsafe class TensorExtensions
                 return result;
             }
         }
-        else
+
         {
             var status = MlxOps.Squeeze(out var result, array, TensorUtilities.DefaultStream());
             TensorUtilities.CheckStatus(status, "squeeze");
@@ -181,12 +193,18 @@ public static unsafe class TensorExtensions
         }
     }
 
+    public static MlxArrayHandle Squeezed(this MlxArrayHandle array, params int[] axes)
+    {
+        ArgumentNullException.ThrowIfNull(axes);
+
+        return array.Squeezed(axes.AsSpan());
+    }
+
     /// <summary>
     /// Broadcasts an array to the specified shape.
     /// </summary>
-    public static MlxArrayHandle BroadcastTo(this MlxArrayHandle array, params int[] shape)
+    public static MlxArrayHandle BroadcastTo(this MlxArrayHandle array, ReadOnlySpan<int> shape)
     {
-        ArgumentNullException.ThrowIfNull(shape);
         fixed (int* ptr = shape)
         {
             var status = MlxOps.BroadcastTo(out var result, array, ptr, (nuint)shape.Length, TensorUtilities.DefaultStream());
@@ -196,14 +214,17 @@ public static unsafe class TensorExtensions
         }
     }
 
+    public static MlxArrayHandle BroadcastTo(this MlxArrayHandle array, params int[] shape)
+    {
+        ArgumentNullException.ThrowIfNull(shape);
+
+        return array.BroadcastTo(shape.AsSpan());
+    }
+
     /// <summary>
     /// Creates a view into the tensor with the specified shape and strides.
     /// </summary>
-    public static MlxArrayHandle AsStrided(
-        this MlxArrayHandle array,
-        ReadOnlySpan<int> shape,
-        ReadOnlySpan<long> strides,
-        nuint offset = 0)
+    public static MlxArrayHandle AsStrided(this MlxArrayHandle array, ReadOnlySpan<int> shape, ReadOnlySpan<long> strides, nuint offset = 0)
     {
         if (shape.Length != strides.Length)
             throw new ArgumentException("Shape and strides must have the same length.");
@@ -220,6 +241,7 @@ public static unsafe class TensorExtensions
                 (nuint)strides.Length,
                 offset,
                 TensorUtilities.DefaultStream());
+
             TensorUtilities.CheckStatus(status, "as_strided");
 
             return result;
@@ -339,12 +361,7 @@ public static unsafe class TensorExtensions
     /// <summary>
     /// Computes <c>result = beta * c + alpha * (a @ b)</c>.
     /// </summary>
-    public static MlxArrayHandle Addmm(
-        this MlxArrayHandle c,
-        MlxArrayHandle a,
-        MlxArrayHandle b,
-        float alpha = 1f,
-        float beta = 1f)
+    public static MlxArrayHandle Addmm(this MlxArrayHandle c, MlxArrayHandle a, MlxArrayHandle b, float alpha = 1f, float beta = 1f)
     {
         var status = MlxOps.Addmm(out var result, c, a, b, alpha, beta, TensorUtilities.DefaultStream());
         TensorUtilities.CheckStatus(status, "addmm");
@@ -355,8 +372,7 @@ public static unsafe class TensorExtensions
     /// <summary>
     /// Computes the mean over the specified axis.
     /// </summary>
-    public static MlxArrayHandle Mean(this MlxArrayHandle array, int axis, bool keepDims = false)
-        => array.Mean([axis], keepDims);
+    public static MlxArrayHandle Mean(this MlxArrayHandle array, int axis, bool keepDims = false) => array.Mean([axis], keepDims);
 
     /// <summary>
     /// Computes the mean over the specified axes.
@@ -375,16 +391,12 @@ public static unsafe class TensorExtensions
             return single;
         }
 
-        var normalized = NormalizeAxes(axes, array.Rank());
+        Span<int> normalized = stackalloc int[axes.Length];
+        NormalizeAxes(axes, array.Rank(), normalized);
+
         fixed (int* axesPtr = normalized)
         {
-            var status = MlxOps.MeanAxes(
-                out var result,
-                array,
-                axesPtr,
-                (nuint)normalized.Length,
-                keepDims,
-                TensorUtilities.DefaultStream());
+            var status = MlxOps.MeanAxes(out var result, array, axesPtr, (nuint)normalized.Length, keepDims, TensorUtilities.DefaultStream());
             TensorUtilities.CheckStatus(status, "mean_axes");
 
             return result;
@@ -394,8 +406,7 @@ public static unsafe class TensorExtensions
     /// <summary>
     /// Computes the maximum over the specified axis.
     /// </summary>
-    public static MlxArrayHandle Max(this MlxArrayHandle array, int axis, bool keepDims = false)
-        => array.Max([axis], keepDims);
+    public static MlxArrayHandle Max(this MlxArrayHandle array, int axis, bool keepDims = false) => array.Max([axis], keepDims);
 
     /// <summary>
     /// Computes the maximum over the specified axes.
@@ -414,16 +425,12 @@ public static unsafe class TensorExtensions
             return single;
         }
 
-        var normalized = NormalizeAxes(axes, array.Rank());
+        Span<int> normalized = stackalloc int[axes.Length];
+        NormalizeAxes(axes, array.Rank(), normalized);
+
         fixed (int* axesPtr = normalized)
         {
-            var status = MlxOps.MaxAxes(
-                out var result,
-                array,
-                axesPtr,
-                (nuint)normalized.Length,
-                keepDims,
-                TensorUtilities.DefaultStream());
+            var status = MlxOps.MaxAxes(out var result, array, axesPtr, (nuint)normalized.Length, keepDims, TensorUtilities.DefaultStream());
             TensorUtilities.CheckStatus(status, "max_axes");
 
             return result;
@@ -524,14 +531,15 @@ public static unsafe class TensorExtensions
         return axis;
     }
 
-    internal static int[] NormalizeAxes(ReadOnlySpan<int> axes, int rank)
+    internal static void NormalizeAxes(ReadOnlySpan<int> axes, int rank, Span<int> normalized)
     {
-        var normalized = new int[axes.Length];
+        if (normalized.Length != axes.Length)
+            throw new ArgumentException("Normalized axes destination must match the number of axes.", nameof(normalized));
+
         for (var i = 0; i < axes.Length; i++)
             normalized[i] = NormalizeAxis(axes[i], rank);
-        Array.Sort(normalized);
 
-        return normalized;
+        normalized.Sort();
     }
 
     /// <summary>
@@ -562,16 +570,12 @@ public static unsafe class TensorExtensions
             return single;
         }
 
-        var normalized = NormalizeAxes(axes, array.Rank());
+        Span<int> normalized = stackalloc int[axes.Length];
+        NormalizeAxes(axes, array.Rank(), normalized);
+
         fixed (int* axesPtr = normalized)
         {
-            var status = MlxOps.SumAxes(
-                out var result,
-                array,
-                axesPtr,
-                (nuint)normalized.Length,
-                keepDims,
-                TensorUtilities.DefaultStream());
+            var status = MlxOps.SumAxes(out var result, array, axesPtr, (nuint)normalized.Length, keepDims, TensorUtilities.DefaultStream());
             TensorUtilities.CheckStatus(status, "sum_axes");
 
             return result;
@@ -581,8 +585,7 @@ public static unsafe class TensorExtensions
     /// <summary>
     /// Computes the sum along a given axis.
     /// </summary>
-    public static MlxArrayHandle Sum(this MlxArrayHandle array, int axis, bool keepDims = false)
-        => array.Sum([axis], keepDims);
+    public static MlxArrayHandle Sum(this MlxArrayHandle array, int axis, bool keepDims = false) => array.Sum([axis], keepDims);
 
     /// <summary>
     /// Computes the log-sum-exp along the specified axis.
@@ -607,16 +610,12 @@ public static unsafe class TensorExtensions
         if (axes.Length == 1)
             return array.LogSumExp(axes[0], keepDims);
 
-        var normalized = NormalizeAxes(axes, array.Rank());
+        Span<int> normalized = stackalloc int[axes.Length];
+        NormalizeAxes(axes, array.Rank(), normalized);
+
         fixed (int* axesPtr = normalized)
         {
-            var status = MlxOps.LogsumexpAxes(
-                out var result,
-                array,
-                axesPtr,
-                (nuint)normalized.Length,
-                keepDims,
-                TensorUtilities.DefaultStream());
+            var status = MlxOps.LogsumexpAxes(out var result, array, axesPtr, (nuint)normalized.Length, keepDims, TensorUtilities.DefaultStream());
             TensorUtilities.CheckStatus(status, "logsumexp_axes");
 
             return result;
@@ -642,6 +641,7 @@ public static unsafe class TensorExtensions
         var dtype = MlxArray.DType(array);
         var minScalar = TensorFactory.Scalar(min ?? float.NegativeInfinity, dtype);
         var maxScalar = TensorFactory.Scalar(max ?? float.PositiveInfinity, dtype);
+
         try
         {
             var status = MlxOps.Clip(out var result, array, minScalar, maxScalar, TensorUtilities.DefaultStream());
@@ -653,6 +653,7 @@ public static unsafe class TensorExtensions
         {
             if (!TensorUtilities.IsNull(minScalar))
                 MlxArray.Free(minScalar);
+
             if (!TensorUtilities.IsNull(maxScalar))
                 MlxArray.Free(maxScalar);
         }
@@ -720,6 +721,7 @@ public static unsafe class TensorExtensions
     public static MlxArrayHandle Pow(this MlxArrayHandle array, float exponent)
     {
         var scalar = TensorFactory.Scalar(exponent, MlxArray.DType(array));
+
         try
         {
             var status = MlxOps.Power(out var result, array, scalar, TensorUtilities.DefaultStream());
@@ -740,6 +742,7 @@ public static unsafe class TensorExtensions
     public static MlxArrayHandle Negative(this MlxArrayHandle array)
     {
         var scalar = TensorFactory.ScalarLike(array, -1f);
+
         try
         {
             var status = MlxOps.Multiply(out var result, array, scalar, TensorUtilities.DefaultStream());
@@ -795,9 +798,10 @@ public static unsafe class TensorExtensions
     {
         var rank = array.Rank();
         var normalizedAxis = NormalizeAxis(axis, rank);
-        var shape = array.Shape();
+        var shape = array.ShapeSpan();
 
         var sliceStop = stop ?? shape[normalizedAxis];
+
         if (sliceStop < 0)
             sliceStop = shape[normalizedAxis] + sliceStop;
 
@@ -826,6 +830,7 @@ public static unsafe class TensorExtensions
             strideBuffer,
             (nuint)rank,
             TensorUtilities.DefaultStream());
+
         TensorUtilities.CheckStatus(status, "slice");
 
         return result;
@@ -844,11 +849,11 @@ public static unsafe class TensorExtensions
     }
 
     /// <summary>
-    /// Stacks a collection of tensors along a new axis.
+    /// Stacks a span of tensors along a new axis.
     /// </summary>
-    public static MlxArrayHandle Stack(this IReadOnlyList<MlxArrayHandle> arrays, int axis = 0)
+    public static MlxArrayHandle Stack(this ReadOnlySpan<MlxArrayHandle> arrays, int axis = 0)
     {
-        if (arrays.Count == 0)
+        if (arrays.Length == 0)
             throw new ArgumentException("At least one tensor is required to stack.", nameof(arrays));
 
         var rank = arrays[0].Rank();
@@ -857,11 +862,8 @@ public static unsafe class TensorExtensions
         if (normalizedAxis < 0 || normalizedAxis > rank)
             throw new ArgumentOutOfRangeException(nameof(axis));
 
-        var temp = new MlxArrayHandle[arrays.Count];
-        for (var i = 0; i < arrays.Count; i++)
-            temp[i] = arrays[i];
+        var vector = TensorVectorUtilities.Create(arrays);
 
-        var vector = TensorVectorUtilities.Create(temp);
         try
         {
             var status = MlxOps.StackAxis(out var result, vector, normalizedAxis, TensorUtilities.DefaultStream());
@@ -876,11 +878,31 @@ public static unsafe class TensorExtensions
     }
 
     /// <summary>
+    /// Stacks a collection of tensors along a new axis.
+    /// </summary>
+    public static MlxArrayHandle Stack(this IReadOnlyList<MlxArrayHandle> arrays, int axis = 0)
+    {
+        if (arrays.Count == 0)
+            throw new ArgumentException("At least one tensor is required to stack.", nameof(arrays));
+
+        if (arrays is MlxArrayHandle[] array)
+            return array.AsSpan().Stack(axis);
+
+        var temp = arrays.Count <= 32 ? stackalloc MlxArrayHandle[arrays.Count] : new MlxArrayHandle[arrays.Count];
+
+        for (var i = 0; i < arrays.Count; i++)
+            temp[i] = arrays[i];
+
+        return temp.Stack(axis);
+    }
+
+    /// <summary>
     /// Adds a scalar value to the tensor.
     /// </summary>
     public static MlxArrayHandle AddScalar(this MlxArrayHandle array, float value)
     {
         var scalar = TensorFactory.ScalarLike(array, value);
+
         try
         {
             var status = MlxOps.Add(out var result, array, scalar, TensorUtilities.DefaultStream());
@@ -901,6 +923,7 @@ public static unsafe class TensorExtensions
     public static MlxArrayHandle MultiplyScalar(this MlxArrayHandle array, float value)
     {
         var scalar = TensorFactory.ScalarLike(array, value);
+
         try
         {
             var status = MlxOps.Multiply(out var result, array, scalar, TensorUtilities.DefaultStream());

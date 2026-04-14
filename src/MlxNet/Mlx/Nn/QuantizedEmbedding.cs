@@ -1,84 +1,90 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
 using System;
-using Itexoft.Mlx;
 
 namespace Itexoft.Mlx.Nn;
 
 public sealed class QuantizedEmbedding : Embedding, IQuantized
 {
-    private readonly ModuleBuffer _scalesBuffer;
-    private readonly ModuleBuffer? _biasesBuffer;
+    private readonly ModuleBuffer? biasesBuffer;
+    private readonly ModuleBuffer scalesBuffer;
 
-    public int GroupSize { get; }
-    public int Bits { get; }
-    public QuantizationMode Mode { get; }
+    public QuantizedEmbedding(int embeddingCount, int dimensions, int groupSize = 64, int bits = 4, QuantizationMode mode = QuantizationMode.Affine) :
+        this(CreateRandomWeight(embeddingCount, dimensions), groupSize, bits, mode) { }
 
-    public QuantizedEmbedding(
-        int embeddingCount,
-        int dimensions,
-        int groupSize = 64,
-        int bits = 4,
-        QuantizationMode mode = QuantizationMode.Affine)
-        : this(CreateRandomWeight(embeddingCount, dimensions), groupSize, bits, mode) { }
+    public QuantizedEmbedding(Embedding other, int groupSize = 64, int bits = 4, QuantizationMode mode = QuantizationMode.Affine) : this(
+        other.Weight.Value.Copy(),
+        groupSize,
+        bits,
+        mode) { }
 
-    public QuantizedEmbedding(Embedding other, int groupSize = 64, int bits = 4, QuantizationMode mode = QuantizationMode.Affine)
-        : this(other.Weight.Value.Copy(), groupSize, bits, mode) { }
-
-    public QuantizedEmbedding(MlxArrayHandle weight, int groupSize, int bits, QuantizationMode mode)
-        : base(QuantizeWeight(weight, groupSize, bits, mode, out var scales, out var biases), false)
+    public QuantizedEmbedding(MlxArrayHandle weight, int groupSize, int bits, QuantizationMode mode) : base(
+        QuantizeWeight(weight, groupSize, bits, mode, out var scales, out var biases),
+        false)
     {
         this.GroupSize = groupSize;
         this.Bits = bits;
         this.Mode = mode;
 
-        this._scalesBuffer = this.RegisterBuffer("scales", scales);
-        this._biasesBuffer = TensorUtilities.IsNull(biases) ? null : this.RegisterBuffer("quant_biases", biases);
+        this.scalesBuffer = this.RegisterBuffer("scales", scales);
+        this.biasesBuffer = TensorUtilities.IsNull(biases) ? null : this.RegisterBuffer("quant_biases", biases);
 
         this.Weight.Trainable = false;
     }
 
+    public int GroupSize { get; }
+    public int Bits { get; }
+    public QuantizationMode Mode { get; }
+
     public override MlxArrayHandle Forward(MlxArrayHandle indices)
     {
-        var originalShape = indices.Shape();
+        var originalShape = indices.ShapeSpan();
         var flatSize = checked((int)MlxArray.Size(indices));
 
-        var flat = new int[] { flatSize };
+        Span<int> flat = stackalloc int[1] { flatSize };
         var flattened = indices.Reshape(flat);
-        var flatIndices = flattened.AsType(MlxDType.MLX_INT32);
+        var flatIndices = flattened.AsType(MlxDType.MlxInt32);
         MlxArray.Free(flattened);
 
         var weightRows = GatherRows(this.Weight.Value, flatIndices);
-        var scaleRows = GatherRows(this._scalesBuffer.Value, flatIndices);
+        var scaleRows = GatherRows(this.scalesBuffer.Value, flatIndices);
 
         MlxArrayHandle biasRows = default;
-        if (this._biasesBuffer is not null)
-            biasRows = GatherRows(this._biasesBuffer.Value, flatIndices);
+
+        if (this.biasesBuffer is not null)
+            biasRows = GatherRows(this.biasesBuffer.Value, flatIndices);
 
         var status = MlxOps.Dequantize(
             out var dequantized,
             weightRows,
             scaleRows,
             biasRows,
-            this.GroupSize,
-            this.Bits,
+            CreateOptionalInt(this.GroupSize),
+            CreateOptionalInt(this.Bits),
             this.Mode.ToNativeString(),
+            default,
+            default,
             TensorUtilities.DefaultStream());
+
         TensorUtilities.CheckStatus(status, "dequantize");
 
         MlxArray.Free(weightRows);
         MlxArray.Free(scaleRows);
+
         if (!TensorUtilities.IsNull(biasRows))
             MlxArray.Free(biasRows);
 
-        var embeddingShape = dequantized.Shape();
+        var embeddingShape = dequantized.ShapeSpan();
         var embeddingDimension = embeddingShape[^1];
 
-        var outputShape = new int[originalShape.Length + 1];
+        Span<int> outputShape = stackalloc int[originalShape.Length + 1];
+
         for (var i = 0; i < originalShape.Length; i++)
             outputShape[i] = originalShape[i];
+
         outputShape[^1] = embeddingDimension;
 
         var output = dequantized.Reshape(outputShape);
@@ -90,18 +96,20 @@ public sealed class QuantizedEmbedding : Embedding, IQuantized
 
     public override MlxArrayHandle AsLinear(MlxArrayHandle input)
     {
-        var biasesHandle = this._biasesBuffer?.Value ?? default;
+        var biasesHandle = this.biasesBuffer?.Value ?? default;
+
         var status = MlxOps.QuantizedMatmul(
             out var result,
             input,
             this.Weight.Value,
-            this._scalesBuffer.Value,
+            this.scalesBuffer.Value,
             biasesHandle,
             true,
-            this.GroupSize,
-            this.Bits,
+            CreateOptionalInt(this.GroupSize),
+            CreateOptionalInt(this.Bits),
             this.Mode.ToNativeString(),
             TensorUtilities.DefaultStream());
+
         TensorUtilities.CheckStatus(status, "quantized_matmul");
 
         return result;
@@ -118,10 +126,12 @@ public sealed class QuantizedEmbedding : Embedding, IQuantized
         var status = MlxOps.Quantize(
             out var packed,
             weight,
-            groupSize,
-            bits,
+            CreateOptionalInt(groupSize),
+            CreateOptionalInt(bits),
             mode.ToNativeString(),
+            default,
             TensorUtilities.DefaultStream());
+
         TensorUtilities.CheckStatus(status, "quantize");
         MlxArray.Free(weight);
 
@@ -131,6 +141,7 @@ public sealed class QuantizedEmbedding : Embedding, IQuantized
             TensorUtilities.CheckStatus(MlxVector.ArrayGet(out scales, packed, 1), "quantize[1]");
 
             biases = default;
+
             if (MlxVector.ArraySize(packed) > 2)
                 TensorUtilities.CheckStatus(MlxVector.ArrayGet(out biases, packed, 2), "quantize[2]");
 
@@ -144,14 +155,16 @@ public sealed class QuantizedEmbedding : Embedding, IQuantized
 
     private static MlxArrayHandle GatherRows(MlxArrayHandle matrix, MlxArrayHandle indices)
     {
-        var matrixShape = matrix.Shape();
+        var matrixShape = matrix.ShapeSpan();
         var rank = matrixShape.Length;
-        var count = indices.Shape()[0];
+        var count = indices.Dim(0);
 
-        var reshapeIndices = indices.Reshape(new[] { count, 1 });
+        Span<int> reshapeShape = stackalloc int[2] { count, 1 };
+        var reshapeIndices = indices.Reshape(reshapeShape);
 
-        var broadcastShape = new int[rank];
+        Span<int> broadcastShape = stackalloc int[rank];
         broadcastShape[0] = count;
+
         for (var i = 1; i < rank; i++)
             broadcastShape[i] = matrixShape[i];
 
@@ -170,4 +183,6 @@ public sealed class QuantizedEmbedding : Embedding, IQuantized
 
         return TensorFactory.Normal(0f, scale, [embeddingCount, dimensions]);
     }
+
+    private static MlxOptionalInt CreateOptionalInt(int value) => new() { value = value, has_value = true };
 }

@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -11,10 +12,10 @@ namespace Itexoft.Mlx.Nn;
 /// </summary>
 public class MultiHeadAttention : Module
 {
-    private readonly Linear _queryProjection;
-    private readonly Linear _keyProjection;
-    private readonly Linear _valueProjection;
-    private readonly Linear _outProjection;
+    private readonly Linear keyProjection;
+    private readonly Linear outProjection;
+    private readonly Linear queryProjection;
+    private readonly Linear valueProjection;
 
     public MultiHeadAttention(
         int dimensions,
@@ -37,25 +38,25 @@ public class MultiHeadAttention : Module
         var vDim = valueDimensions ?? dimensions;
         var vOutDim = valueOutputDimensions ?? dimensions;
 
-        this._queryProjection = this.RegisterModule("query_proj", new Linear(qInput, dimensions, bias));
-        this._keyProjection = this.RegisterModule("key_proj", new Linear(kInput, dimensions, bias));
-        this._valueProjection = this.RegisterModule("value_proj", new Linear(vInput, vDim, bias));
-        this._outProjection = this.RegisterModule("out_proj", new Linear(vDim, vOutDim, bias));
+        this.queryProjection = this.RegisterModule("query_proj", new Linear(qInput, dimensions, bias));
+        this.keyProjection = this.RegisterModule("key_proj", new Linear(kInput, dimensions, bias));
+        this.valueProjection = this.RegisterModule("value_proj", new Linear(vInput, vDim, bias));
+        this.outProjection = this.RegisterModule("out_proj", new Linear(vDim, vOutDim, bias));
     }
 
     public int NumHeads { get; }
 
-    public Linear QueryProjection => this._queryProjection;
+    public Linear QueryProjection => this.queryProjection;
 
-    public Linear KeyProjection => this._keyProjection;
+    public Linear KeyProjection => this.keyProjection;
 
-    public Linear ValueProjection => this._valueProjection;
+    public Linear ValueProjection => this.valueProjection;
 
-    public Linear OutProjection => this._outProjection;
+    public Linear OutProjection => this.outProjection;
 
-    public static MlxArrayHandle CreateAdditiveCausalMask(int n, MlxDType dtype = MlxDType.MLX_FLOAT32)
+    public static MlxArrayHandle CreateAdditiveCausalMask(int n, MlxDType dtype = MlxDType.MlxFloat32)
     {
-        var indices = TensorFactory.Arange(0, n, 1, MlxDType.MLX_INT32);
+        var indices = TensorFactory.Arange(0, n, 1, MlxDType.MlxInt32);
         var rows = indices.ExpandedDimension(1);
         var cols = indices.ExpandedDimension(0);
         var maskBool = rows.LessThan(cols);
@@ -73,15 +74,11 @@ public class MultiHeadAttention : Module
         return scaled;
     }
 
-    public MlxArrayHandle Forward(
-        MlxArrayHandle queries,
-        MlxArrayHandle keys,
-        MlxArrayHandle values,
-        MlxArrayHandle? mask = null)
+    public MlxArrayHandle Forward(MlxArrayHandle queries, MlxArrayHandle keys, MlxArrayHandle values, MlxArrayHandle? mask = null)
     {
-        var qProj = this._queryProjection.Forward(queries);
-        var kProj = this._keyProjection.Forward(keys);
-        var vProj = this._valueProjection.Forward(values);
+        var qProj = this.queryProjection.Forward(queries);
+        var kProj = this.keyProjection.Forward(keys);
+        var vProj = this.valueProjection.Forward(values);
 
         try
         {
@@ -128,7 +125,7 @@ public class MultiHeadAttention : Module
             var reshaped = transposed.Reshape(batch, targetLen, this.NumHeads * valueDim);
             MlxArray.Free(transposed);
 
-            var output = this._outProjection.Forward(reshaped);
+            var output = this.outProjection.Forward(reshaped);
             MlxArray.Free(reshaped);
 
             return output;
@@ -141,10 +138,7 @@ public class MultiHeadAttention : Module
         }
     }
 
-    public MlxArrayHandle Forward(
-        MlxArrayHandle input,
-        MlxArrayHandle? mask = null)
-        => this.Forward(input, input, input, mask);
+    public MlxArrayHandle Forward(MlxArrayHandle input, MlxArrayHandle? mask = null) => this.Forward(input, input, input, mask);
 }
 
 /// <summary>
@@ -152,15 +146,15 @@ public class MultiHeadAttention : Module
 /// </summary>
 public class TransformerEncoderLayer : Module, IUnaryLayer
 {
-    private readonly MultiHeadAttention _attention;
-    private readonly LayerNorm _ln1;
-    private readonly LayerNorm _ln2;
-    private readonly Linear _linear1;
-    private readonly Linear _linear2;
-    private readonly Dropout _dropout1;
-    private readonly Dropout _dropout2;
-    private readonly IUnaryLayer _activation;
-    private readonly bool _normFirst;
+    private readonly IUnaryLayer activation;
+    private readonly MultiHeadAttention attention;
+    private readonly Dropout dropout1;
+    private readonly Dropout dropout2;
+    private readonly Linear linear1;
+    private readonly Linear linear2;
+    private readonly LayerNorm ln1;
+    private readonly LayerNorm ln2;
+    private readonly bool normFirst;
 
     public TransformerEncoderLayer(
         int dimensions,
@@ -170,54 +164,55 @@ public class TransformerEncoderLayer : Module, IUnaryLayer
         IUnaryLayer? activation = null,
         bool normFirst = false)
     {
-        this._attention = this.RegisterModule("self_attn", new MultiHeadAttention(dimensions, numHeads));
-        this._ln1 = this.RegisterModule("norm1", new LayerNorm(dimensions));
-        this._ln2 = this.RegisterModule("norm2", new LayerNorm(dimensions));
+        this.attention = this.RegisterModule("self_attn", new MultiHeadAttention(dimensions, numHeads));
+        this.ln1 = this.RegisterModule("norm1", new LayerNorm(dimensions));
+        this.ln2 = this.RegisterModule("norm2", new LayerNorm(dimensions));
 
         var hidden = mlpDimensions ?? dimensions * 4;
-        this._linear1 = this.RegisterModule("linear1", new Linear(dimensions, hidden));
-        this._linear2 = this.RegisterModule("linear2", new Linear(hidden, dimensions));
+        this.linear1 = this.RegisterModule("linear1", new Linear(dimensions, hidden));
+        this.linear2 = this.RegisterModule("linear2", new Linear(hidden, dimensions));
 
-        this._dropout1 = this.RegisterModule("dropout1", new Dropout(dropout));
-        this._dropout2 = this.RegisterModule("dropout2", new Dropout(dropout));
+        this.dropout1 = this.RegisterModule("dropout1", new Dropout(dropout));
+        this.dropout2 = this.RegisterModule("dropout2", new Dropout(dropout));
 
-        this._activation = activation ?? new ReLU();
-        if (this._activation is Module moduleActivation)
+        this.activation = activation ?? new ReLu();
+
+        if (this.activation is Module moduleActivation)
             this.RegisterModule("activation", moduleActivation);
 
-        this._normFirst = normFirst;
+        this.normFirst = normFirst;
     }
 
-    public MlxArrayHandle Forward(MlxArrayHandle input, MlxArrayHandle? mask = null)
-        => this._normFirst ? this.ForwardNormFirst(input, mask) : this.ForwardPost(input, mask);
-
     MlxArrayHandle IUnaryLayer.Forward(MlxArrayHandle input) => this.Forward(input, null);
+
+    public MlxArrayHandle Forward(MlxArrayHandle input, MlxArrayHandle? mask = null) =>
+        this.normFirst ? this.ForwardNormFirst(input, mask) : this.ForwardPost(input, mask);
 
     private MlxArrayHandle ForwardNormFirst(MlxArrayHandle input, MlxArrayHandle? mask)
     {
         var x = input;
 
-        var normed = this._ln1.Forward(x);
-        var attn = this._attention.Forward(normed, normed, normed, mask);
+        var normed = this.ln1.Forward(x);
+        var attn = this.attention.Forward(normed, normed, normed, mask);
         MlxArray.Free(normed);
 
-        var droppedAttn = this._dropout1.Forward(attn);
+        var droppedAttn = this.dropout1.Forward(attn);
         ReleaseIfDistinct(attn, droppedAttn);
 
         var residual1 = x.Add(droppedAttn);
         MlxArray.Free(droppedAttn);
 
-        var normed2 = this._ln2.Forward(residual1);
-        var ff1 = this._linear1.Forward(normed2);
+        var normed2 = this.ln2.Forward(residual1);
+        var ff1 = this.linear1.Forward(normed2);
         MlxArray.Free(normed2);
 
-        var activated = this._activation.Forward(ff1);
+        var activated = this.activation.Forward(ff1);
         MlxArray.Free(ff1);
 
-        var dropped = this._dropout2.Forward(activated);
+        var dropped = this.dropout2.Forward(activated);
         ReleaseIfDistinct(activated, dropped);
 
-        var ff2 = this._linear2.Forward(dropped);
+        var ff2 = this.linear2.Forward(dropped);
         MlxArray.Free(dropped);
 
         var output = residual1.Add(ff2);
@@ -231,31 +226,31 @@ public class TransformerEncoderLayer : Module, IUnaryLayer
     {
         var x = input;
 
-        var attn = this._attention.Forward(x, x, x, mask);
-        var droppedAttn = this._dropout1.Forward(attn);
+        var attn = this.attention.Forward(x, x, x, mask);
+        var droppedAttn = this.dropout1.Forward(attn);
         ReleaseIfDistinct(attn, droppedAttn);
 
         var residual1 = x.Add(droppedAttn);
         MlxArray.Free(droppedAttn);
 
-        var normed1 = this._ln1.Forward(residual1);
-        var ff1 = this._linear1.Forward(normed1);
+        var normed1 = this.ln1.Forward(residual1);
+        var ff1 = this.linear1.Forward(normed1);
         MlxArray.Free(normed1);
 
-        var activated = this._activation.Forward(ff1);
+        var activated = this.activation.Forward(ff1);
         MlxArray.Free(ff1);
 
-        var dropped = this._dropout2.Forward(activated);
+        var dropped = this.dropout2.Forward(activated);
         ReleaseIfDistinct(activated, dropped);
 
-        var ff2 = this._linear2.Forward(dropped);
+        var ff2 = this.linear2.Forward(dropped);
         MlxArray.Free(dropped);
 
         var residual2 = residual1.Add(ff2);
         MlxArray.Free(ff2);
         MlxArray.Free(residual1);
 
-        var output = this._ln2.Forward(residual2);
+        var output = this.ln2.Forward(residual2);
         MlxArray.Free(residual2);
 
         return output;

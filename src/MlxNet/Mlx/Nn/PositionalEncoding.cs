@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -9,14 +10,13 @@ namespace Itexoft.Mlx.Nn;
 /// <summary>
 /// Rotary positional encoding as described in RoFormer.
 /// </summary>
-public sealed class Rope(int dimensions, bool traditional = false, float @base = 10_000f, float scale = 1f)
-    : Module, IUnaryLayer
+public sealed class Rope(int dimensions, bool traditional = false, float @base = 10_000f, float scale = 1f) : Module, IUnaryLayer
 {
     public MlxArrayHandle Forward(MlxArrayHandle input) => this.Forward(input, 0);
 
     public MlxArrayHandle Forward(MlxArrayHandle input, int offset)
     {
-        var shape = input.Shape();
+        var shape = input.ShapeSpan();
 
         if (shape.Length < 2)
             throw new ArgumentException("RoPE expects the last two dimensions to represent sequence and features.");
@@ -24,11 +24,13 @@ public sealed class Rope(int dimensions, bool traditional = false, float @base =
         var seq = shape[^2];
         var feature = shape[^1];
         var batch = 1;
+
         for (var i = 0; i < shape.Length - 2; i++)
             batch *= shape[i];
 
-        var reshaped = input.Reshape(batch, seq, feature);
-        var optionalBase = new MlxOptionalFloat { value = @base, has_value = 1 };
+        Span<int> reshapedShape = stackalloc int[3] { batch, seq, feature };
+        var reshaped = input.Reshape(reshapedShape);
+        var optionalBase = new MlxOptionalFloat { value = @base, has_value = true };
 
         var status = MlxFast.Rope(
             out var rope,
@@ -40,6 +42,7 @@ public sealed class Rope(int dimensions, bool traditional = false, float @base =
             offset,
             default,
             TensorUtilities.DefaultStream());
+
         TensorUtilities.CheckStatus(status, "rope");
 
         var restored = rope.Reshape(shape);

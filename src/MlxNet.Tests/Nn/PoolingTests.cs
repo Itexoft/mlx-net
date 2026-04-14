@@ -1,11 +1,9 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
-using System;
 using System.Linq;
-using Itexoft.Mlx;
-using Itexoft.Mlx.Nn;
 using NUnit.Framework;
 
 namespace Itexoft.Mlx.Nn.Tests;
@@ -19,10 +17,12 @@ public sealed class PoolingTests
         TestHelpers.RequireNativeOrIgnore();
 
         var input = CreateArray([0f, 1f, 2f, 3f], [1, 4, 1]);
+
         try
         {
-            using var pool = new MaxPool1d(2, 1);
+            using var pool = new MaxPool1D(2, 1);
             var output = pool.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval output");
@@ -47,10 +47,12 @@ public sealed class PoolingTests
 
         var inputValues = Enumerable.Range(0, 8).Select(v => (float)v).ToArray();
         var input = CreateArray(inputValues, [2, 4, 1]);
+
         try
         {
-            using var pool = new MaxPool1d(2, 2);
+            using var pool = new MaxPool1D(2, 2);
             var output = pool.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval output");
@@ -75,10 +77,12 @@ public sealed class PoolingTests
 
         var inputValues = Enumerable.Range(0, 16).Select(v => (float)v).ToArray();
         var input = CreateArray(inputValues, [1, 4, 4, 1]);
+
         try
         {
-            using var pool = new MaxPool2d((2, 2), (1, 1));
+            using var pool = new MaxPool2D((2, 2), (1, 1));
             var output = pool.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval output");
@@ -103,10 +107,12 @@ public sealed class PoolingTests
 
         var inputValues = Enumerable.Range(0, 32).Select(v => (float)v).ToArray();
         var input = CreateArray(inputValues, [2, 4, 4, 1]);
+
         try
         {
-            using var pool = new MaxPool2d((2, 2), (2, 2));
+            using var pool = new MaxPool2D((2, 2), (2, 2));
             var output = pool.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval output");
@@ -130,10 +136,12 @@ public sealed class PoolingTests
         TestHelpers.RequireNativeOrIgnore();
 
         var input = CreateArray([0f, 1f, 2f, 3f], [1, 4, 1]);
+
         try
         {
-            using var pool = new AvgPool1d(2, 1);
+            using var pool = new AvgPool1D(2, 1);
             var output = pool.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval output");
@@ -158,10 +166,12 @@ public sealed class PoolingTests
 
         var inputValues = Enumerable.Range(0, 8).Select(v => (float)v).ToArray();
         var input = CreateArray(inputValues, [2, 4, 1]);
+
         try
         {
-            using var pool = new AvgPool1d(2, 2);
+            using var pool = new AvgPool1D(2, 2);
             var output = pool.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval output");
@@ -186,10 +196,12 @@ public sealed class PoolingTests
 
         var inputValues = Enumerable.Range(0, 16).Select(v => (float)v).ToArray();
         var input = CreateArray(inputValues, [1, 4, 4, 1]);
+
         try
         {
-            using var pool = new AvgPool2d((2, 2), (1, 1));
+            using var pool = new AvgPool2D((2, 2), (1, 1));
             var output = pool.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval output");
@@ -215,10 +227,12 @@ public sealed class PoolingTests
 
         var inputValues = Enumerable.Range(0, 16).Select(v => (float)v).ToArray();
         var input = CreateArray(inputValues, [1, 4, 4, 1]);
+
         try
         {
-            using var pool = new AvgPool2d((2, 2), (2, 2));
+            using var pool = new AvgPool2D((2, 2), (2, 2));
             var output = pool.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval output");
@@ -240,8 +254,6 @@ public sealed class PoolingTests
     {
         fixed (float* data = values)
         fixed (int* dims = shape)
-        {
-            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MLX_FLOAT32);
-        }
+            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MlxFloat32);
     }
 }

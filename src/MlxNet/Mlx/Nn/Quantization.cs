@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -26,9 +27,7 @@ public static class Quantization
         if (module is IQuantized)
             return null;
 
-        return module is IQuantizable quantizable
-            ? quantizable.ToQuantized(groupSize, bits, mode)
-            : null;
+        return module is IQuantizable quantizable ? quantizable.ToQuantized(groupSize, bits, mode) : null;
     }
 
     public static void Quantize(
@@ -43,12 +42,14 @@ public static class Quantization
         apply ??= QuantizeSingle;
 
         var replacements = new Dictionary<string, Module>(StringComparer.Ordinal);
+
         foreach (var (path, module) in model.LeafModules())
         {
             if (!filter(path, module))
                 continue;
 
             var replacement = apply(module, groupSize, bits, mode);
+
             if (replacement is not null)
                 replacements[path] = replacement;
         }
@@ -65,6 +66,7 @@ public static class Quantization
         apply ??= QuantizeSingle;
 
         var replacements = new Dictionary<string, Module>(StringComparer.Ordinal);
+
         foreach (var (path, module) in model.FlattenModules())
         {
             var selection = selector(path, module);
@@ -74,6 +76,7 @@ public static class Quantization
 
             var (groupSize, bits, mode) = selection.Value;
             var replacement = apply(module, groupSize, bits, mode);
+
             if (replacement is not null)
                 replacements[path] = replacement;
         }
@@ -85,11 +88,10 @@ public static class Quantization
 
 internal static class QuantizationModeExtensions
 {
-    internal static string ToNativeString(this QuantizationMode mode)
-        => mode switch
-        {
-            QuantizationMode.Affine => "affine",
-            QuantizationMode.Mxfp4 => "mxfp4",
-            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported quantization mode.")
-        };
+    internal static string ToNativeString(this QuantizationMode mode) => mode switch
+    {
+        QuantizationMode.Affine => "affine",
+        QuantizationMode.Mxfp4 => "mxfp4",
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported quantization mode."),
+    };
 }

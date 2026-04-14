@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -14,6 +15,7 @@ public abstract class ConvolutionBase : Module, IUnaryLayer
     protected ConvolutionBase(MlxArrayHandle weight, MlxArrayHandle? bias)
     {
         this.Weight = this.RegisterParameter("weight", weight);
+
         if (!TensorUtilities.IsNull(bias ?? default))
             this.Bias = this.RegisterParameter("bias", bias!.Value);
     }
@@ -21,6 +23,7 @@ public abstract class ConvolutionBase : Module, IUnaryLayer
     protected ConvolutionBase(MlxArrayHandle weight, bool bias)
     {
         this.Weight = this.RegisterParameter("weight", weight);
+
         if (bias)
             this.Bias = this.RegisterParameter("bias", TensorFactory.Zeros([weight.Dim(0)]));
     }
@@ -35,21 +38,20 @@ public abstract class ConvolutionBase : Module, IUnaryLayer
 
     public abstract MlxArrayHandle Forward(MlxArrayHandle input);
 
-    protected static float ComputeScale(int denominator)
-        => MathF.Sqrt(1f / denominator);
+    protected static float ComputeScale(int denominator) => MathF.Sqrt(1f / denominator);
 }
 
 /// <summary>
 /// 1D convolution over NLC-formatted tensors.
 /// </summary>
-public sealed class Conv1d : ConvolutionBase
+public sealed class Conv1D : ConvolutionBase
 {
-    private readonly int _stride;
-    private readonly int _padding;
-    private readonly int _dilation;
-    private readonly int _groups;
+    private readonly int dilation;
+    private readonly int groups;
+    private readonly int padding;
+    private readonly int stride;
 
-    public Conv1d(
+    public Conv1D(
         int inputChannels,
         int outputChannels,
         int kernelSize,
@@ -57,34 +59,34 @@ public sealed class Conv1d : ConvolutionBase
         int padding = 0,
         int dilation = 1,
         int groups = 1,
-        bool bias = true)
-        : base(
-            TensorFactory.Uniform(
-                -ComputeScale(inputChannels * kernelSize),
-                ComputeScale(inputChannels * kernelSize),
-                [outputChannels, kernelSize, inputChannels / groups]),
-            bias)
+        bool bias = true) : base(
+        TensorFactory.Uniform(
+            -ComputeScale(inputChannels * kernelSize),
+            ComputeScale(inputChannels * kernelSize),
+            [outputChannels, kernelSize, inputChannels / groups]),
+        bias)
     {
         if (inputChannels % groups != 0)
             throw new ArgumentException("Input channels must be divisible by number of groups.", nameof(groups));
 
-        this._stride = stride;
-        this._padding = padding;
-        this._dilation = dilation;
-        this._groups = groups;
+        this.stride = stride;
+        this.padding = padding;
+        this.dilation = dilation;
+        this.groups = groups;
     }
 
     public override MlxArrayHandle Forward(MlxArrayHandle input)
     {
-        var status = MlxOps.Conv1d(
+        var status = MlxOps.Conv1D(
             out var result,
             input,
             this.Weight.Value,
-            this._stride,
-            this._padding,
-            this._dilation,
-            this._groups,
+            this.stride,
+            this.padding,
+            this.dilation,
+            this.groups,
             TensorUtilities.DefaultStream());
+
         TensorUtilities.CheckStatus(status, "conv1d");
 
         if (this.Bias is { } bias)
@@ -102,14 +104,14 @@ public sealed class Conv1d : ConvolutionBase
 /// <summary>
 /// 2D convolution over NHWC-formatted tensors.
 /// </summary>
-public sealed class Conv2d : ConvolutionBase
+public sealed class Conv2D : ConvolutionBase
 {
-    private readonly IntPair _stride;
-    private readonly IntPair _padding;
-    private readonly IntPair _dilation;
-    private readonly int _groups;
+    private readonly IntPair dilation;
+    private readonly int groups;
+    private readonly IntPair padding;
+    private readonly IntPair stride;
 
-    public Conv2d(
+    public Conv2D(
         int inputChannels,
         int outputChannels,
         IntPair kernelSize,
@@ -117,37 +119,37 @@ public sealed class Conv2d : ConvolutionBase
         IntPair? padding = null,
         IntPair? dilation = null,
         int groups = 1,
-        bool bias = true)
-        : base(
-            TensorFactory.Uniform(
-                -ComputeScale(inputChannels * kernelSize.First * kernelSize.Second),
-                ComputeScale(inputChannels * kernelSize.First * kernelSize.Second),
-                [outputChannels, kernelSize.First, kernelSize.Second, inputChannels / groups]),
-            bias)
+        bool bias = true) : base(
+        TensorFactory.Uniform(
+            -ComputeScale(inputChannels * kernelSize.First * kernelSize.Second),
+            ComputeScale(inputChannels * kernelSize.First * kernelSize.Second),
+            [outputChannels, kernelSize.First, kernelSize.Second, inputChannels / groups]),
+        bias)
     {
         if (inputChannels % groups != 0)
             throw new ArgumentException("Input channels must be divisible by number of groups.", nameof(groups));
 
-        this._stride = stride ?? new IntPair(1, 1);
-        this._padding = padding ?? new IntPair(0, 0);
-        this._dilation = dilation ?? new IntPair(1, 1);
-        this._groups = groups;
+        this.stride = stride ?? new IntPair(1, 1);
+        this.padding = padding ?? new IntPair(0, 0);
+        this.dilation = dilation ?? new IntPair(1, 1);
+        this.groups = groups;
     }
 
     public override MlxArrayHandle Forward(MlxArrayHandle input)
     {
-        var status = MlxOps.Conv2d(
+        var status = MlxOps.Conv2D(
             out var result,
             input,
             this.Weight.Value,
-            this._stride.First,
-            this._stride.Second,
-            this._padding.First,
-            this._padding.Second,
-            this._dilation.First,
-            this._dilation.Second,
-            this._groups,
+            this.stride.First,
+            this.stride.Second,
+            this.padding.First,
+            this.padding.Second,
+            this.dilation.First,
+            this.dilation.Second,
+            this.groups,
             TensorUtilities.DefaultStream());
+
         TensorUtilities.CheckStatus(status, "conv2d");
 
         if (this.Bias is { } bias)
@@ -165,7 +167,7 @@ public sealed class Conv2d : ConvolutionBase
 /// <summary>
 /// 3D convolution over NDHWC-formatted tensors.
 /// </summary>
-public sealed class Conv3d(
+public sealed class Conv3D(
     int inputChannels,
     int outputChannels,
     IntTriple kernelSize,
@@ -173,33 +175,31 @@ public sealed class Conv3d(
     IntTriple? padding = null,
     IntTriple? dilation = null,
     int groups = 1,
-    bool bias = true)
-    : ConvolutionBase(
-        CreateWeight(inputChannels, outputChannels, kernelSize, groups),
-        bias)
+    bool bias = true) : ConvolutionBase(CreateWeight(inputChannels, outputChannels, kernelSize, groups), bias)
 {
-    private readonly IntTriple _stride = stride ?? new IntTriple(1, 1, 1);
-    private readonly IntTriple _padding = padding ?? new IntTriple(0, 0, 0);
-    private readonly IntTriple _dilation = dilation ?? new IntTriple(1, 1, 1);
-    private readonly int _groups = groups;
+    private readonly IntTriple dilation = dilation ?? new IntTriple(1, 1, 1);
+    private readonly int groups = groups;
+    private readonly IntTriple padding = padding ?? new IntTriple(0, 0, 0);
+    private readonly IntTriple stride = stride ?? new IntTriple(1, 1, 1);
 
     public override MlxArrayHandle Forward(MlxArrayHandle input)
     {
-        var status = MlxOps.Conv3d(
+        var status = MlxOps.Conv3D(
             out var result,
             input,
             this.Weight.Value,
-            this._stride.First,
-            this._stride.Second,
-            this._stride.Third,
-            this._padding.First,
-            this._padding.Second,
-            this._padding.Third,
-            this._dilation.First,
-            this._dilation.Second,
-            this._dilation.Third,
-            this._groups,
+            this.stride.First,
+            this.stride.Second,
+            this.stride.Third,
+            this.padding.First,
+            this.padding.Second,
+            this.padding.Third,
+            this.dilation.First,
+            this.dilation.Second,
+            this.dilation.Third,
+            this.groups,
             TensorUtilities.DefaultStream());
+
         TensorUtilities.CheckStatus(status, "conv3d");
 
         if (this.Bias is { } bias)
@@ -224,25 +224,22 @@ public sealed class Conv3d(
         var kernelVolume = kernelSize.First * kernelSize.Second * kernelSize.Third;
         var limit = ComputeScale(inputChannels * kernelVolume);
 
-        return TensorFactory.Uniform(
-            -limit,
-            limit,
-            [outputChannels, kernelSize.First, kernelSize.Second, kernelSize.Third, inputChannels / groups]);
+        return TensorFactory.Uniform(-limit, limit, [outputChannels, kernelSize.First, kernelSize.Second, kernelSize.Third, inputChannels / groups]);
     }
 }
 
 /// <summary>
 /// 1D transposed convolution over NLC-formatted tensors.
 /// </summary>
-public sealed class ConvTranspose1d : ConvolutionBase
+public sealed class ConvTranspose1D : ConvolutionBase
 {
-    private readonly int _stride;
-    private readonly int _padding;
-    private readonly int _dilation;
-    private readonly int _outputPadding;
-    private readonly int _groups;
+    private readonly int dilation;
+    private readonly int groups;
+    private readonly int outputPadding;
+    private readonly int padding;
+    private readonly int stride;
 
-    public ConvTranspose1d(
+    public ConvTranspose1D(
         int inputChannels,
         int outputChannels,
         int kernelSize,
@@ -251,13 +248,12 @@ public sealed class ConvTranspose1d : ConvolutionBase
         int dilation = 1,
         int groups = 1,
         int outputPadding = 0,
-        bool bias = true)
-        : base(
-            TensorFactory.Uniform(
-                -ComputeScale(inputChannels * kernelSize),
-                ComputeScale(inputChannels * kernelSize),
-                [outputChannels, kernelSize, inputChannels]),
-            bias)
+        bool bias = true) : base(
+        TensorFactory.Uniform(
+            -ComputeScale(inputChannels * kernelSize),
+            ComputeScale(inputChannels * kernelSize),
+            [outputChannels, kernelSize, inputChannels]),
+        bias)
     {
         if (groups <= 0)
             throw new ArgumentOutOfRangeException(nameof(groups));
@@ -265,25 +261,26 @@ public sealed class ConvTranspose1d : ConvolutionBase
         if (outputPadding < 0)
             throw new ArgumentOutOfRangeException(nameof(outputPadding));
 
-        this._stride = stride;
-        this._padding = padding;
-        this._dilation = dilation;
-        this._outputPadding = outputPadding;
-        this._groups = groups;
+        this.stride = stride;
+        this.padding = padding;
+        this.dilation = dilation;
+        this.outputPadding = outputPadding;
+        this.groups = groups;
     }
 
     public override MlxArrayHandle Forward(MlxArrayHandle input)
     {
-        var status = MlxOps.ConvTranspose1d(
+        var status = MlxOps.ConvTranspose1D(
             out var result,
             input,
             this.Weight.Value,
-            this._stride,
-            this._padding,
-            this._dilation,
-            this._outputPadding,
-            this._groups,
+            this.stride,
+            this.padding,
+            this.dilation,
+            this.outputPadding,
+            this.groups,
             TensorUtilities.DefaultStream());
+
         TensorUtilities.CheckStatus(status, "conv_transpose1d");
 
         if (this.Bias is { } bias)
@@ -301,15 +298,15 @@ public sealed class ConvTranspose1d : ConvolutionBase
 /// <summary>
 /// 2D transposed convolution over NHWC-formatted tensors.
 /// </summary>
-public sealed class ConvTranspose2d : ConvolutionBase
+public sealed class ConvTranspose2D : ConvolutionBase
 {
-    private readonly IntPair _stride;
-    private readonly IntPair _padding;
-    private readonly IntPair _dilation;
-    private readonly IntPair _outputPadding;
-    private readonly int _groups;
+    private readonly IntPair dilation;
+    private readonly int groups;
+    private readonly IntPair outputPadding;
+    private readonly IntPair padding;
+    private readonly IntPair stride;
 
-    public ConvTranspose2d(
+    public ConvTranspose2D(
         int inputChannels,
         int outputChannels,
         IntPair kernelSize,
@@ -318,40 +315,40 @@ public sealed class ConvTranspose2d : ConvolutionBase
         IntPair? dilation = null,
         int groups = 1,
         IntPair? outputPadding = null,
-        bool bias = true)
-        : base(
-            TensorFactory.Uniform(
-                -ComputeScale(inputChannels * kernelSize.First * kernelSize.Second),
-                ComputeScale(inputChannels * kernelSize.First * kernelSize.Second),
-                [outputChannels, kernelSize.First, kernelSize.Second, inputChannels]),
-            bias)
+        bool bias = true) : base(
+        TensorFactory.Uniform(
+            -ComputeScale(inputChannels * kernelSize.First * kernelSize.Second),
+            ComputeScale(inputChannels * kernelSize.First * kernelSize.Second),
+            [outputChannels, kernelSize.First, kernelSize.Second, inputChannels]),
+        bias)
     {
         if (groups <= 0)
             throw new ArgumentOutOfRangeException(nameof(groups));
 
-        this._stride = stride ?? new IntPair(1, 1);
-        this._padding = padding ?? new IntPair(0, 0);
-        this._dilation = dilation ?? new IntPair(1, 1);
-        this._outputPadding = outputPadding ?? new IntPair(0, 0);
-        this._groups = groups;
+        this.stride = stride ?? new IntPair(1, 1);
+        this.padding = padding ?? new IntPair(0, 0);
+        this.dilation = dilation ?? new IntPair(1, 1);
+        this.outputPadding = outputPadding ?? new IntPair(0, 0);
+        this.groups = groups;
     }
 
     public override MlxArrayHandle Forward(MlxArrayHandle input)
     {
-        var status = MlxOps.ConvTranspose2d(
+        var status = MlxOps.ConvTranspose2D(
             out var result,
             input,
             this.Weight.Value,
-            this._stride.First,
-            this._stride.Second,
-            this._padding.First,
-            this._padding.Second,
-            this._dilation.First,
-            this._dilation.Second,
-            this._outputPadding.First,
-            this._outputPadding.Second,
-            this._groups,
+            this.stride.First,
+            this.stride.Second,
+            this.padding.First,
+            this.padding.Second,
+            this.dilation.First,
+            this.dilation.Second,
+            this.outputPadding.First,
+            this.outputPadding.Second,
+            this.groups,
             TensorUtilities.DefaultStream());
+
         TensorUtilities.CheckStatus(status, "conv_transpose2d");
 
         if (this.Bias is { } bias)
@@ -369,15 +366,15 @@ public sealed class ConvTranspose2d : ConvolutionBase
 /// <summary>
 /// 3D transposed convolution over NDHWC-formatted tensors.
 /// </summary>
-public sealed class ConvTranspose3d : ConvolutionBase
+public sealed class ConvTranspose3D : ConvolutionBase
 {
-    private readonly IntTriple _stride;
-    private readonly IntTriple _padding;
-    private readonly IntTriple _dilation;
-    private readonly IntTriple _outputPadding;
-    private readonly int _groups;
+    private readonly IntTriple dilation;
+    private readonly int groups;
+    private readonly IntTriple outputPadding;
+    private readonly IntTriple padding;
+    private readonly IntTriple stride;
 
-    public ConvTranspose3d(
+    public ConvTranspose3D(
         int inputChannels,
         int outputChannels,
         IntTriple kernelSize,
@@ -386,44 +383,44 @@ public sealed class ConvTranspose3d : ConvolutionBase
         IntTriple? dilation = null,
         int groups = 1,
         IntTriple? outputPadding = null,
-        bool bias = true)
-        : base(
-            TensorFactory.Uniform(
-                -ComputeScale(inputChannels * kernelSize.First * kernelSize.Second * kernelSize.Third),
-                ComputeScale(inputChannels * kernelSize.First * kernelSize.Second * kernelSize.Third),
-                [outputChannels, kernelSize.First, kernelSize.Second, kernelSize.Third, inputChannels]),
-            bias)
+        bool bias = true) : base(
+        TensorFactory.Uniform(
+            -ComputeScale(inputChannels * kernelSize.First * kernelSize.Second * kernelSize.Third),
+            ComputeScale(inputChannels * kernelSize.First * kernelSize.Second * kernelSize.Third),
+            [outputChannels, kernelSize.First, kernelSize.Second, kernelSize.Third, inputChannels]),
+        bias)
     {
         if (groups <= 0)
             throw new ArgumentOutOfRangeException(nameof(groups));
 
-        this._stride = stride ?? new IntTriple(1, 1, 1);
-        this._padding = padding ?? new IntTriple(0, 0, 0);
-        this._dilation = dilation ?? new IntTriple(1, 1, 1);
-        this._outputPadding = outputPadding ?? new IntTriple(0, 0, 0);
-        this._groups = groups;
+        this.stride = stride ?? new IntTriple(1, 1, 1);
+        this.padding = padding ?? new IntTriple(0, 0, 0);
+        this.dilation = dilation ?? new IntTriple(1, 1, 1);
+        this.outputPadding = outputPadding ?? new IntTriple(0, 0, 0);
+        this.groups = groups;
     }
 
     public override MlxArrayHandle Forward(MlxArrayHandle input)
     {
-        var status = MlxOps.ConvTranspose3d(
+        var status = MlxOps.ConvTranspose3D(
             out var result,
             input,
             this.Weight.Value,
-            this._stride.First,
-            this._stride.Second,
-            this._stride.Third,
-            this._padding.First,
-            this._padding.Second,
-            this._padding.Third,
-            this._dilation.First,
-            this._dilation.Second,
-            this._dilation.Third,
-            this._outputPadding.First,
-            this._outputPadding.Second,
-            this._outputPadding.Third,
-            this._groups,
+            this.stride.First,
+            this.stride.Second,
+            this.stride.Third,
+            this.padding.First,
+            this.padding.Second,
+            this.padding.Third,
+            this.dilation.First,
+            this.dilation.Second,
+            this.dilation.Third,
+            this.outputPadding.First,
+            this.outputPadding.Second,
+            this.outputPadding.Third,
+            this.groups,
             TensorUtilities.DefaultStream());
+
         TensorUtilities.CheckStatus(status, "conv_transpose3d");
 
         if (this.Bias is { } bias)

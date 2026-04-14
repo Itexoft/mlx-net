@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -13,24 +14,15 @@ public static unsafe class TestHelpers
 {
     public delegate void WithShapeAction(int* shape, nuint length);
 
-    internal struct MemStream
-    {
-        public byte* data;
-        public nuint pos;
-        public nuint size;
-        public byte err;
-        public byte free_data;
-        public nint label;
-    }
-
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static sbyte* MemLabel(void* desc)
     {
         var ms = (MemStream*)desc;
-        if (ms->label == 0)
-            ms->label = Marshal.StringToHGlobalAnsi("<mem>");
 
-        return (sbyte*)ms->label;
+        if (ms->Label == 0)
+            ms->Label = Marshal.StringToHGlobalAnsi("<mem>");
+
+        return (sbyte*)ms->Label;
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
@@ -41,31 +33,34 @@ public static unsafe class TestHelpers
     {
         if (desc == null)
             return 0;
+
         var m = (MemStream*)desc;
 
-        return (byte)(m->err == 0 ? 1 : 0);
+        return (byte)(m->Err == 0 ? 1 : 0);
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
-    private static nuint MemTell(void* desc) => ((MemStream*)desc)->pos;
+    private static nuint MemTell(void* desc) => ((MemStream*)desc)->Pos;
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void MemSeek(void* desc, long off, int whence)
     {
         var m = (MemStream*)desc;
-        var size = (long)m->size;
-        var cur = (long)m->pos;
+        var size = (long)m->Size;
+        var cur = (long)m->Pos;
+
         var np = whence switch
         {
             0 => off,
             1 => cur + off,
             2 => size + off,
-            _ => cur
+            _ => cur,
         };
+
         if (np < 0 || np > size)
-            m->err = 1;
+            m->Err = 1;
         else
-            m->pos = (nuint)np;
+            m->Pos = (nuint)np;
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
@@ -75,16 +70,18 @@ public static unsafe class TestHelpers
 
         if (n == 0)
             return;
-        if (n > m->size || m->pos > m->size - n)
+
+        if (n > m->Size || m->Pos > m->Size - n)
         {
-            m->err = 1;
+            m->Err = 1;
 
             return;
         }
 
         for (nuint i = 0; i < n; i++)
-            data[i] = (sbyte)m->data[m->pos + i];
-        m->pos += n;
+            data[i] = (sbyte)m->Data[m->Pos + i];
+
+        m->Pos += n;
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
@@ -94,15 +91,16 @@ public static unsafe class TestHelpers
 
         if (n == 0)
             return;
-        if (off > m->size || n > m->size - off)
+
+        if (off > m->Size || n > m->Size - off)
         {
-            m->err = 1;
+            m->Err = 1;
 
             return;
         }
 
         for (nuint i = 0; i < n; i++)
-            data[i] = (sbyte)m->data[off + i];
+            data[i] = (sbyte)m->Data[off + i];
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
@@ -112,32 +110,35 @@ public static unsafe class TestHelpers
 
         if (n == 0)
             return;
-        if (n > m->size || m->pos > m->size - n)
+
+        if (n > m->Size || m->Pos > m->Size - n)
         {
-            m->err = 1;
+            m->Err = 1;
 
             return;
         }
 
         for (nuint i = 0; i < n; i++)
-            m->data[m->pos + i] = (byte)data[i];
-        m->pos += n;
+            m->Data[m->Pos + i] = (byte)data[i];
+
+        m->Pos += n;
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void MemFree(void* desc)
     {
         var m = (MemStream*)desc;
-        if (m->free_data != 0 && m->data != null)
+
+        if (m->FreeData != 0 && m->Data != null)
         {
-            NativeMemory.Free(m->data);
-            m->data = null;
+            NativeMemory.Free(m->Data);
+            m->Data = null;
         }
 
-        if (m->label != 0)
+        if (m->Label != 0)
         {
-            Marshal.FreeHGlobal(m->label);
-            m->label = 0;
+            Marshal.FreeHGlobal(m->Label);
+            m->Label = 0;
         }
     }
 
@@ -165,19 +166,22 @@ public static unsafe class TestHelpers
     public static bool TryGetVersionString(out string value)
     {
         value = string.Empty;
+
         try
         {
             var rc = MlxVersion.Version(out var h);
 
             if (rc != 0)
                 return false;
+
             var ptr = MlxString.Data(h);
             var s = Marshal.PtrToStringUTF8(ptr);
             MlxString.Free(h);
 
             if (string.IsNullOrWhiteSpace(s))
                 return false;
-            value = s!;
+
+            value = s;
 
             return true;
         }
@@ -200,6 +204,7 @@ public static unsafe class TestHelpers
     public static void WithStream(Action<MlxStreamHandle> action)
     {
         var stream = NewCpuStream();
+
         try
         {
             action(stream);
@@ -213,6 +218,7 @@ public static unsafe class TestHelpers
     public static T WithStream<T>(Func<MlxStreamHandle, T> action)
     {
         var stream = NewCpuStream();
+
         try
         {
             return action(stream);
@@ -239,6 +245,7 @@ public static unsafe class TestHelpers
 
         var bytes = sizeof(int) * dims.Length;
         var ptr = (int*)Marshal.AllocHGlobal(bytes);
+
         for (var i = 0; i < dims.Length; i++)
             ptr[i] = dims[i];
 
@@ -269,10 +276,10 @@ public static unsafe class TestHelpers
             destination[i] = dims[i];
     }
 
-
     public static void WithShape(ReadOnlySpan<int> dims, WithShapeAction action)
     {
         var shape = AllocShape(dims);
+
         try
         {
             action(shape, (nuint)dims.Length);
@@ -288,43 +295,59 @@ public static unsafe class TestHelpers
         var ndim = (int)MlxArray.Ndim(a);
         var p = (nint)MlxArray.Shape(a);
         var result = new int[ndim];
+
         for (var i = 0; i < ndim; i++)
             result[i] = Marshal.ReadInt32(p, sizeof(int) * i);
 
         return result;
     }
 
-    public static float[] ToFloat32(MlxArrayHandle a)
+    public static float[] ToFloat32(MlxArrayHandle a) => ReadStrided(a, MlxArray.DataFloat32(a));
+
+    public static int[] ToInt32(MlxArrayHandle a) => ReadStrided(a, MlxArray.DataInt32(a));
+
+    public static double[] ToFloat64(MlxArrayHandle a) => ReadStrided(a, MlxArray.DataFloat64(a));
+
+    private static T[] ReadStrided<T>(MlxArrayHandle handle, T* data) where T : unmanaged
     {
-        var n = (int)MlxArray.Size(a);
-        var p = MlxArray.DataFloat32(a);
-        var arr = new float[n];
-        for (var i = 0; i < n; i++)
-            arr[i] = *(p + i);
+        var rank = (int)MlxArray.Ndim(handle);
+        var count = (int)MlxArray.Size(handle);
+        var shape = MlxArray.Shape(handle);
+        var strides = MlxArray.Strides(handle);
+        var values = new T[count];
 
-        return arr;
-    }
+        if (count == 0)
+            return values;
 
-    public static int[] ToInt32(MlxArrayHandle a)
-    {
-        var n = (int)MlxArray.Size(a);
-        var p = MlxArray.DataInt32(a);
-        var arr = new int[n];
-        for (var i = 0; i < n; i++)
-            arr[i] = *(p + i);
+        if (rank == 0)
+        {
+            values[0] = *data;
 
-        return arr;
-    }
+            return values;
+        }
 
-    public static double[] ToFloat64(MlxArrayHandle a)
-    {
-        var n = (int)MlxArray.Size(a);
-        var p = MlxArray.DataFloat64(a);
-        var arr = new double[n];
-        for (var i = 0; i < n; i++)
-            arr[i] = *(p + i);
+        var coordinates = stackalloc int[rank];
 
-        return arr;
+        for (var linearIndex = 0; linearIndex < count; linearIndex++)
+        {
+            var remainder = linearIndex;
+
+            for (var axis = rank - 1; axis >= 0; axis--)
+            {
+                var axisLength = shape[axis];
+                coordinates[axis] = remainder % axisLength;
+                remainder /= axisLength;
+            }
+
+            nuint offset = 0;
+
+            for (var axis = 0; axis < rank; axis++)
+                offset += (nuint)coordinates[axis] * strides[axis];
+
+            values[linearIndex] = data[offset];
+        }
+
+        return values;
     }
 
     public static void EvalArray(MlxArrayHandle handle, string label = "eval")
@@ -361,20 +384,20 @@ public static unsafe class TestHelpers
     {
         var buf = NativeMemory.Alloc(capacity);
         MemStream mem;
-        mem.data = (byte*)buf;
-        mem.pos = 0;
-        mem.size = capacity;
-        mem.err = 0;
-        mem.free_data = 0;
-        mem.label = 0;
+        mem.Data = (byte*)buf;
+        mem.Pos = 0;
+        mem.Size = capacity;
+        mem.Err = 0;
+        mem.FreeData = 0;
+        mem.Label = 0;
 
         var vt = MakeMemVTable();
         var writer = MlxIoTypes.IoWriterNew(&mem, vt);
         Ok(MlxIo.SaveSafetensorsWriter(writer, data, meta), "save_mem");
 
-        var len = checked((int)mem.pos);
+        var len = checked((int)mem.Pos);
         var result = new byte[len];
-        Marshal.Copy((nint)mem.data, result, 0, len);
+        Marshal.Copy((nint)mem.Data, result, 0, len);
 
         MlxIoTypes.IoWriterFree(writer);
         NativeMemory.Free(buf);
@@ -386,10 +409,8 @@ public static unsafe class TestHelpers
     {
         var dict = new Dictionary<string, float[]>();
         var it = MlxMap.StringToArrayIteratorNew(data);
-        nint key;
-        MlxArrayHandle arr = default;
 
-        while (MlxMap.StringToArrayIteratorNext(out key, out arr, it) == 0)
+        while (MlxMap.StringToArrayIteratorNext(out var key, out var arr, it) == 0)
         {
             var name = Marshal.PtrToStringUTF8(key)!;
             Ok(MlxArray.Eval(arr), "eval");
@@ -407,12 +428,12 @@ public static unsafe class TestHelpers
         Marshal.Copy(buffer, 0, (nint)unmanaged, buffer.Length);
 
         MemStream mem;
-        mem.data = (byte*)unmanaged;
-        mem.pos = 0;
-        mem.size = (nuint)buffer.Length;
-        mem.err = 0;
-        mem.free_data = 1;
-        mem.label = 0;
+        mem.Data = (byte*)unmanaged;
+        mem.Pos = 0;
+        mem.Size = (nuint)buffer.Length;
+        mem.Err = 0;
+        mem.FreeData = 1;
+        mem.Label = 0;
 
         var vt = MakeMemVTable();
         var reader = MlxIoTypes.IoReaderNew(&mem, vt);
@@ -426,11 +447,22 @@ public static unsafe class TestHelpers
             var vals = loaded[kv.Key];
             var expv = kv.Value;
             Assert.That(vals.Length, Is.EqualTo(expv.Length));
+
             for (var i = 0; i < vals.Length; i++)
                 Assert.That(vals[i], Is.EqualTo(expv[i]).Within(1e-6));
         }
 
         MlxMap.StringToArrayFree(data);
         MlxMap.StringToStringFree(meta);
+    }
+
+    internal struct MemStream
+    {
+        public byte* Data;
+        public nuint Pos;
+        public nuint Size;
+        public byte Err;
+        public byte FreeData;
+        public nint Label;
     }
 }

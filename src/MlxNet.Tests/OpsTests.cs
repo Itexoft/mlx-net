@@ -1,9 +1,10 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
-using NUnit.Framework;
 using Itexoft.Mlx;
+using NUnit.Framework;
 
 [TestFixture]
 public unsafe class OpsTests
@@ -12,16 +13,17 @@ public unsafe class OpsTests
     public void Zeros_Ones_Full_Sum()
     {
         TestHelpers.RequireNativeOrIgnore();
+
         TestHelpers.WithStream(stream =>
         {
             TestHelpers.WithShape(
                 [2, 3],
                 (shape, rank) =>
                 {
-                    TestHelpers.Ok(MlxOps.Zeros(out var z, shape, rank, MlxDType.MLX_FLOAT32, stream), "zeros");
-                    TestHelpers.Ok(MlxOps.Ones(out var o, shape, rank, MlxDType.MLX_FLOAT32, stream), "ones");
+                    TestHelpers.Ok(MlxOps.Zeros(out var z, shape, rank, MlxDType.MlxFloat32, stream), "zeros");
+                    TestHelpers.Ok(MlxOps.Ones(out var o, shape, rank, MlxDType.MlxFloat32, stream), "ones");
                     var two = MlxArray.NewFloat32(2f);
-                    TestHelpers.Ok(MlxOps.Full(out var f, shape, rank, two, MlxDType.MLX_FLOAT32, stream), "full");
+                    TestHelpers.Ok(MlxOps.Full(out var f, shape, rank, two, MlxDType.MlxFloat32, stream), "full");
                     TestHelpers.Ok(MlxOps.Sum(out var sz, z, false, stream), "sum z");
                     TestHelpers.Ok(MlxOps.Sum(out var so, o, false, stream), "sum o");
                     TestHelpers.Ok(MlxOps.Sum(out var sf, f, false, stream), "sum f");
@@ -47,6 +49,7 @@ public unsafe class OpsTests
     public void Add_Two_Small_Arrays()
     {
         TestHelpers.RequireNativeOrIgnore();
+
         TestHelpers.WithStream(stream =>
         {
             TestHelpers.WithShape(
@@ -54,8 +57,8 @@ public unsafe class OpsTests
                 (shape, rank) =>
                 {
                     var one = MlxArray.NewFloat32(1f);
-                    TestHelpers.Ok(MlxOps.Full(out var a, shape, rank, one, MlxDType.MLX_FLOAT32, stream), "full a");
-                    TestHelpers.Ok(MlxOps.Full(out var b, shape, rank, one, MlxDType.MLX_FLOAT32, stream), "full b");
+                    TestHelpers.Ok(MlxOps.Full(out var a, shape, rank, one, MlxDType.MlxFloat32, stream), "full a");
+                    TestHelpers.Ok(MlxOps.Full(out var b, shape, rank, one, MlxDType.MlxFloat32, stream), "full b");
                     TestHelpers.Ok(MlxOps.Add(out var c, a, b, stream), "add");
                     TestHelpers.EvalArray(c);
                     var v = TestHelpers.ToFloat32(c);
@@ -72,6 +75,7 @@ public unsafe class OpsTests
     public void Matmul_2x3_3x2_Float32()
     {
         TestHelpers.RequireNativeOrIgnore();
+
         TestHelpers.WithStream(stream =>
         {
             var aData = new[] { 1f, 2f, 3f, 4f, 5f, 6f };
@@ -90,8 +94,8 @@ public unsafe class OpsTests
                             fixed (float* pa = aData)
                             fixed (float* pb = bData)
                             {
-                                var a = MlxArray.NewData(pa, sa, (int)ra, MlxDType.MLX_FLOAT32);
-                                var b = MlxArray.NewData(pb, sb, (int)rb, MlxDType.MLX_FLOAT32);
+                                var a = MlxArray.NewData(pa, sa, (int)ra, MlxDType.MlxFloat32);
+                                var b = MlxArray.NewData(pb, sb, (int)rb, MlxDType.MlxFloat32);
                                 TestHelpers.Ok(MlxOps.Matmul(out var c, a, b, stream), "matmul");
                                 TestHelpers.EvalArray(c);
                                 var v = TestHelpers.ToFloat32(c);
@@ -114,6 +118,7 @@ public unsafe class OpsTests
     {
         TestHelpers.RequireNativeOrIgnore();
         var x = new[] { 1f, 2f, 3f };
+
         TestHelpers.WithStream(stream =>
         {
             TestHelpers.WithShape(
@@ -122,7 +127,7 @@ public unsafe class OpsTests
                 {
                     fixed (float* px = x)
                     {
-                        var a = MlxArray.NewData(px, shape, (int)rank, MlxDType.MLX_FLOAT32);
+                        var a = MlxArray.NewData(px, shape, (int)rank, MlxDType.MlxFloat32);
                         TestHelpers.Ok(MlxOps.Softmax(out var y, a, true, stream), "softmax");
                         TestHelpers.EvalArray(y);
                         var v = TestHelpers.ToFloat32(y);

@@ -2,10 +2,8 @@
 */*/bin
 */*/obj
 /build/
-/nuget/
-*.DS_Store
-.idea/
-*.user
 src/MlxNativeAot/build-cache/
 Agents.md
-.notes/
+*.DS_Store
+.*/
+TestResults/

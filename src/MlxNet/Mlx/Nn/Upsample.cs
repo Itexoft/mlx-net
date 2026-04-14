@@ -1,10 +1,9 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
 using System;
-using System.Collections.Generic;
-using Itexoft.Mlx;
 
 namespace Itexoft.Mlx.Nn;
 
@@ -12,14 +11,13 @@ public enum UpsampleMode
 {
     Nearest,
     Linear,
-    Cubic
+    Cubic,
 }
 
 /// <summary>
 /// Upsamples spatial dimensions of the input tensor.
 /// </summary>
-public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = UpsampleMode.Nearest, bool alignCorners = false)
-    : Module, IUnaryLayer
+public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = UpsampleMode.Nearest, bool alignCorners = false) : Module, IUnaryLayer
 {
     public MlxArrayHandle Forward(MlxArrayHandle input)
     {
@@ -29,27 +27,30 @@ public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = Upsam
             throw new ArgumentException("Upsample expects input tensors with at least one spatial dimension (rank >= 3).", nameof(input));
 
         var spatialDimensions = rank - 2;
-        var scales = scaleFactor.AsArray(spatialDimensions);
+        Span<float> scales = stackalloc float[spatialDimensions];
+        scaleFactor.CopyTo(scales);
 
         return mode switch
         {
             UpsampleMode.Nearest => UpsampleNearest(input, scales),
             UpsampleMode.Linear => this.UpsampleInterpolate(input, scales, false),
             UpsampleMode.Cubic => this.UpsampleInterpolate(input, scales, true),
-            _ => throw new ArgumentOutOfRangeException()
+            _ => throw new ArgumentOutOfRangeException(),
         };
     }
 
-    private static MlxArrayHandle UpsampleNearest(MlxArrayHandle input, float[] scales)
+    private static MlxArrayHandle UpsampleNearest(MlxArrayHandle input, ReadOnlySpan<float> scales)
     {
-        var originalShape = input.Shape();
+        var originalShape = input.ShapeSpan();
         var spatialDims = originalShape.Length - 2;
 
-        var integerScales = new int[spatialDims];
+        Span<int> integerScales = stackalloc int[spatialDims];
         var useFastPath = true;
+
         for (var i = 0; i < spatialDims; i++)
         {
             var rounded = MathF.Round(scales[i]);
+
             if (MathF.Abs(scales[i] - rounded) > 1e-6f || rounded <= 0f)
             {
                 useFastPath = false;
@@ -61,31 +62,39 @@ public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = Upsam
         }
 
         if (useFastPath)
-            return UpsampleNearestInteger(input, scales, integerScales, originalShape);
+            return UpsampleNearestInteger(input, integerScales, originalShape);
 
         return UpsampleNearestGeneral(input, scales, originalShape);
     }
 
-    private static MlxArrayHandle UpsampleNearestInteger(MlxArrayHandle input, float[] scales, int[] integerScales, int[] originalShape)
+    private static MlxArrayHandle UpsampleNearestInteger(MlxArrayHandle input, ReadOnlySpan<int> integerScales, ReadOnlySpan<int> originalShape)
     {
         var spatialDims = integerScales.Length;
-        var shapeList = new List<int>(originalShape);
+        Span<int> expandedShape = stackalloc int[originalShape.Length + spatialDims];
+        expandedShape[0] = originalShape[0];
 
         for (var d = 0; d < spatialDims; d++)
-            shapeList.Insert(2 + 2 * d, 1);
+        {
+            expandedShape[1 + 2 * d] = originalShape[1 + d];
+            expandedShape[2 + 2 * d] = 1;
+        }
 
-        var reshaped = input.Reshape(shapeList.ToArray());
+        expandedShape[^1] = originalShape[^1];
+
+        var reshaped = input.Reshape(expandedShape);
 
         for (var d = 0; d < spatialDims; d++)
-            shapeList[2 + 2 * d] = integerScales[d];
+            expandedShape[2 + 2 * d] = integerScales[d];
 
-        var broadcasted = reshaped.BroadcastTo(shapeList.ToArray());
+        var broadcasted = reshaped.BroadcastTo(expandedShape);
         MlxArray.Free(reshaped);
 
-        var finalShape = new int[originalShape.Length];
+        Span<int> finalShape = stackalloc int[originalShape.Length];
         finalShape[0] = originalShape[0];
+
         for (var d = 0; d < spatialDims; d++)
             finalShape[1 + d] = originalShape[1 + d] * integerScales[d];
+
         finalShape[^1] = originalShape[^1];
 
         var result = broadcasted.Reshape(finalShape);
@@ -94,18 +103,20 @@ public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = Upsam
         return result;
     }
 
-    private static MlxArrayHandle UpsampleNearestGeneral(MlxArrayHandle input, float[] scales, int[] originalShape)
+    private static MlxArrayHandle UpsampleNearestGeneral(MlxArrayHandle input, ReadOnlySpan<float> scales, ReadOnlySpan<int> originalShape)
     {
         var spatialDims = scales.Length;
         var result = input;
         var ownsResult = false;
+        Span<int> targetShape = stackalloc int[originalShape.Length];
 
         for (var dim = 0; dim < spatialDims; dim++)
         {
             var n = originalShape[1 + dim];
             var indices = CreateNearestIndices(n, scales[dim], dim, spatialDims, out var outputLength);
 
-            var targetShape = result.Shape();
+            var resultShape = result.ShapeSpan();
+            resultShape.CopyTo(targetShape);
             targetShape[1 + dim] = outputLength;
             var broadcast = indices.BroadcastTo(targetShape);
             var gathered = result.TakeAlong(broadcast, 1 + dim);
@@ -122,78 +133,129 @@ public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = Upsam
         return result;
     }
 
-    private MlxArrayHandle UpsampleInterpolate(MlxArrayHandle input, float[] scales, bool isCubic)
+    private MlxArrayHandle UpsampleInterpolate(MlxArrayHandle input, ReadOnlySpan<float> scales, bool isCubic)
     {
         var dims = scales.Length;
         var rank = dims + 2;
-        var originalShape = input.Shape();
+        var originalShape = input.ShapeSpan();
+        Span<int> targetShape = stackalloc int[rank];
+        Span<int> broadcastShape = stackalloc int[rank];
 
         var perDimension = new IndexWeight[dims][];
+
         for (var dim = 0; dim < dims; dim++)
         {
             var n = originalShape[1 + dim];
+
             perDimension[dim] = isCubic
                 ? BuildCubicIndexWeights(n, scales[dim], dim, dims, alignCorners)
                 : BuildLinearIndexWeights(n, scales[dim], dim, dims, alignCorners);
         }
 
-        var combinations = CartesianProduct(perDimension);
-        MlxArrayHandle? accumulator = null;
-
-        foreach (var combo in combinations)
-        {
-            var sample = input;
-            var sampleOwned = false;
-
-            for (var dim = 0; dim < dims; dim++)
-            {
-                var axis = 1 + dim;
-                var targetShape = sample.Shape();
-                targetShape[axis] = combo[dim].OutputLength;
-
-                var broadcastIndices = combo[dim].Indices.BroadcastTo(targetShape);
-                var gathered = sample.TakeAlong(broadcastIndices, axis);
-                MlxArray.Free(broadcastIndices);
-
-                if (sampleOwned)
-                    MlxArray.Free(sample);
-
-                sample = gathered;
-                sampleOwned = true;
-            }
-
-            var combinedWeight = CombineWeights(combo);
-            var sampleShape = sample.Shape();
-            var broadcastWeight = combinedWeight.BroadcastTo(sampleShape);
-            MlxArray.Free(combinedWeight);
-
-            var weightedSample = sample.Multiply(broadcastWeight);
-            MlxArray.Free(broadcastWeight);
-            if (sampleOwned)
-                MlxArray.Free(sample);
-
-            if (accumulator is null)
-            {
-                accumulator = weightedSample;
-            }
-            else
-            {
-                var sum = accumulator.Value.Add(weightedSample);
-                MlxArray.Free(accumulator.Value);
-                MlxArray.Free(weightedSample);
-                accumulator = sum;
-            }
-        }
+        Span<IndexWeight> combination = stackalloc IndexWeight[dims];
+        var hasAccumulator = false;
+        MlxArrayHandle accumulator = default;
+        AccumulateInterpolatedSamples(input, perDimension, combination, 0, targetShape, broadcastShape, ref hasAccumulator, ref accumulator);
 
         DisposeIndexWeights(perDimension);
 
-        return accumulator ?? input;
+        return hasAccumulator ? accumulator : input;
     }
 
-    private static MlxArrayHandle CombineWeights(IReadOnlyList<IndexWeight> weights)
+    private static void AccumulateInterpolatedSamples(
+        MlxArrayHandle input,
+        IndexWeight[][] perDimension,
+        Span<IndexWeight> combination,
+        int depth,
+        Span<int> targetShape,
+        Span<int> broadcastShape,
+        ref bool hasAccumulator,
+        ref MlxArrayHandle accumulator)
+    {
+        if (depth == perDimension.Length)
+        {
+            var weightedSample = BuildWeightedSample(input, combination, targetShape, broadcastShape);
+
+            if (!hasAccumulator)
+            {
+                accumulator = weightedSample;
+                hasAccumulator = true;
+
+                return;
+            }
+
+            var sum = accumulator.Add(weightedSample);
+            MlxArray.Free(accumulator);
+            MlxArray.Free(weightedSample);
+            accumulator = sum;
+
+            return;
+        }
+
+        foreach (var element in perDimension[depth])
+        {
+            combination[depth] = element;
+
+            AccumulateInterpolatedSamples(
+                input,
+                perDimension,
+                combination,
+                depth + 1,
+                targetShape,
+                broadcastShape,
+                ref hasAccumulator,
+                ref accumulator);
+        }
+    }
+
+    private static MlxArrayHandle BuildWeightedSample(
+        MlxArrayHandle input,
+        ReadOnlySpan<IndexWeight> combination,
+        Span<int> targetShape,
+        Span<int> broadcastShape)
+    {
+        var dims = combination.Length;
+        var sample = input;
+        var sampleOwned = false;
+
+        for (var dim = 0; dim < dims; dim++)
+        {
+            var axis = 1 + dim;
+            var sampleShape = sample.ShapeSpan();
+            sampleShape.CopyTo(targetShape);
+            targetShape[axis] = combination[dim].OutputLength;
+
+            var broadcastIndices = combination[dim].Indices.BroadcastTo(targetShape);
+            var gathered = sample.TakeAlong(broadcastIndices, axis);
+            MlxArray.Free(broadcastIndices);
+
+            if (sampleOwned)
+                MlxArray.Free(sample);
+
+            sample = gathered;
+            sampleOwned = true;
+        }
+
+        var combinedWeight = CombineWeights(combination);
+        var currentSampleShape = sample.ShapeSpan();
+        currentSampleShape.CopyTo(broadcastShape);
+        var broadcastWeight = combinedWeight.BroadcastTo(broadcastShape);
+        MlxArray.Free(combinedWeight);
+
+        var weightedSample = sample.Multiply(broadcastWeight);
+        MlxArray.Free(broadcastWeight);
+
+        if (sampleOwned)
+            MlxArray.Free(sample);
+
+        return weightedSample;
+    }
+
+    private static MlxArrayHandle CombineWeights(ReadOnlySpan<IndexWeight> weights)
     {
         var combined = weights[0].Weight.Copy();
-        for (var i = 1; i < weights.Count; i++)
+
+        for (var i = 1; i < weights.Length; i++)
         {
             var multiplied = combined.Multiply(weights[i].Weight);
             MlxArray.Free(combined);
@@ -214,8 +276,8 @@ public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = Upsam
         var diff = clipped.Subtract(indicesLeftFloat);
         var inv = TensorFactory.ScalarLike(diff, 1f).Subtract(diff);
 
-        var indicesLeft = indicesLeftFloat.AsType(MlxDType.MLX_INT32);
-        var indicesRight = indicesRightFloat.AsType(MlxDType.MLX_INT32);
+        var indicesLeft = indicesLeftFloat.AsType(MlxDType.MlxInt32);
+        var indicesRight = indicesRightFloat.AsType(MlxDType.MlxInt32);
 
         MlxArray.Free(indicesLeftFloat);
         MlxArray.Free(indicesRightFloat);
@@ -238,10 +300,10 @@ public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = Upsam
         var weightL2 = ComputeCubicWeight(scaled, indicesL2, 2);
         var weightR2 = ComputeCubicWeight(scaled, indicesR2, 2);
 
-        var clippedL1 = indicesL1.Clip(0f, dimension - 1f).AsType(MlxDType.MLX_INT32);
-        var clippedR1 = indicesR1.Clip(0f, dimension - 1f).AsType(MlxDType.MLX_INT32);
-        var clippedL2 = indicesL2.Clip(0f, dimension - 1f).AsType(MlxDType.MLX_INT32);
-        var clippedR2 = indicesR2.Clip(0f, dimension - 1f).AsType(MlxDType.MLX_INT32);
+        var clippedL1 = indicesL1.Clip(0f, dimension - 1f).AsType(MlxDType.MlxInt32);
+        var clippedR1 = indicesR1.Clip(0f, dimension - 1f).AsType(MlxDType.MlxInt32);
+        var clippedL2 = indicesL2.Clip(0f, dimension - 1f).AsType(MlxDType.MlxInt32);
+        var clippedR2 = indicesR2.Clip(0f, dimension - 1f).AsType(MlxDType.MlxInt32);
 
         MlxArray.Free(indicesL1);
         MlxArray.Free(indicesR1);
@@ -254,7 +316,7 @@ public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = Upsam
             new(clippedL1, weightL1, outputLength),
             new(clippedR1, weightR1, outputLength),
             new(clippedL2, weightL2, outputLength),
-            new(clippedR2, weightR2, outputLength)
+            new(clippedR2, weightR2, outputLength),
         ];
     }
 
@@ -267,6 +329,7 @@ public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = Upsam
         const float a = -0.75f;
 
         MlxArrayHandle result;
+
         if (distance == 1)
         {
             var term1 = abs.MultiplyScalar(a + 2f);
@@ -305,38 +368,6 @@ public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = Upsam
         return result;
     }
 
-    private static List<IndexWeight[]> CartesianProduct(IndexWeight[][] perDimension)
-    {
-        var result = new List<IndexWeight[]>();
-
-        if (perDimension.Length == 0)
-            return result;
-
-        var stack = new IndexWeight[perDimension.Length];
-
-        void Recurse(int depth)
-        {
-            if (depth == perDimension.Length)
-            {
-                var combination = new IndexWeight[stack.Length];
-                Array.Copy(stack, combination, stack.Length);
-                result.Add(combination);
-
-                return;
-            }
-
-            foreach (var element in perDimension[depth])
-            {
-                stack[depth] = element;
-                Recurse(depth + 1);
-            }
-        }
-
-        Recurse(0);
-
-        return result;
-    }
-
     private static void DisposeIndexWeights(IndexWeight[][] perDimension)
     {
         foreach (var array in perDimension)
@@ -355,7 +386,8 @@ public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = Upsam
         var m = Math.Max(1, (int)MathF.Round(scale * dimension));
         outputLength = m;
 
-        var indices = TensorFactory.Arange(0f, m, 1f, MlxDType.MLX_FLOAT32);
+        var indices = TensorFactory.Arange(0f, m, 1f, MlxDType.MlxFloat32);
+
         if (m > dimension)
         {
             var shifted = indices.AddScalar(0.5f);
@@ -375,24 +407,18 @@ public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = Upsam
         var clipped = indices.Clip(0f, dimension - 1f);
         MlxArray.Free(indices);
 
-        var intIndices = clipped.AsType(MlxDType.MLX_INT32);
+        var intIndices = clipped.AsType(MlxDType.MlxInt32);
         MlxArray.Free(clipped);
 
         return ReshapeIndices(intIndices, dims, dimIndex, outputLength);
     }
 
-    private static MlxArrayHandle CreateScaledIndices(
-        int dimension,
-        float scale,
-        bool alignCorners,
-        int dimIndex,
-        int dims,
-        out int outputLength)
+    private static MlxArrayHandle CreateScaledIndices(int dimension, float scale, bool alignCorners, int dimIndex, int dims, out int outputLength)
     {
         var m = Math.Max(1, (int)MathF.Round(scale * dimension));
         outputLength = m;
 
-        var indices = TensorFactory.Arange(0f, m, 1f, MlxDType.MLX_FLOAT32);
+        var indices = TensorFactory.Arange(0f, m, 1f, MlxDType.MlxFloat32);
 
         if (alignCorners)
         {
@@ -428,7 +454,8 @@ public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = Upsam
     private static MlxArrayHandle ReshapeIndices(MlxArrayHandle indices, int dims, int dimIndex, int length)
     {
         var rank = dims + 2;
-        var reshape = new int[rank];
+        Span<int> reshape = stackalloc int[rank];
+
         for (var i = 0; i < rank; i++)
             reshape[i] = 1;
 
@@ -444,7 +471,8 @@ public sealed class Upsample(FloatOrArray scaleFactor, UpsampleMode mode = Upsam
     private static MlxArrayHandle ReshapeFloatIndices(MlxArrayHandle indices, int dims, int dimIndex, int length)
     {
         var rank = dims + 2;
-        var reshape = new int[rank];
+        Span<int> reshape = stackalloc int[rank];
+
         for (var i = 0; i < rank; i++)
             reshape[i] = 1;
 

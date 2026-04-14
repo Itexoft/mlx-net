@@ -1,10 +1,8 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
-using System;
-using Itexoft.Mlx;
-using Itexoft.Mlx.Nn;
 using NUnit.Framework;
 
 namespace Itexoft.Mlx.Nn.Tests;
@@ -21,6 +19,7 @@ public unsafe class DropoutTests
         dropout.Train(true);
 
         var input = CreateArray([1f, -2f, 3f, -4f], [1, 4]);
+
         try
         {
             var result = dropout.Forward(input);
@@ -41,10 +40,11 @@ public unsafe class DropoutTests
     {
         TestHelpers.RequireNativeOrIgnore();
 
-        using var dropout = new Dropout2d(p: 0f);
+        using var dropout = new Dropout2D(p: 0f);
         dropout.Train(true);
 
         var input = CreateArray([1f, 2f, 3f, 4f], [1, 2, 2, 1]);
+
         try
         {
             var result = dropout.Forward(input);
@@ -65,10 +65,11 @@ public unsafe class DropoutTests
     {
         TestHelpers.RequireNativeOrIgnore();
 
-        using var dropout = new Dropout3d(p: 0f);
+        using var dropout = new Dropout3D(p: 0f);
         dropout.Train(true);
 
         var input = CreateArray([1f, 2f, 3f, 4f, 5f, 6f, 7f, 8f], [1, 2, 2, 2, 1]);
+
         try
         {
             var result = dropout.Forward(input);
@@ -88,8 +89,6 @@ public unsafe class DropoutTests
     {
         fixed (float* data = values)
         fixed (int* dims = shape)
-        {
-            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MLX_FLOAT32);
-        }
+            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MlxFloat32);
     }
 }

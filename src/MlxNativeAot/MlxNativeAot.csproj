@@ -6,7 +6,7 @@
     <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk"/>
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <OutputType>Library</OutputType>
         <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
         <PublishAot>true</PublishAot>
@@ -24,7 +24,7 @@
         <RepositoryType>git</RepositoryType>
         <PackageProjectUrl>https://github.com/Itexoft/mlx-net</PackageProjectUrl>
         <PackageTags>MLX;NativeAOT;macOS;arm64;AppleSilicon;bindings;interop;</PackageTags>
-        <LangVersion>13</LangVersion>
+        <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <StripSymbols>false</StripSymbols>
         <NoBuild>true</NoBuild>

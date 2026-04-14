@@ -1,12 +1,10 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using Itexoft.Mlx;
-using Itexoft.Mlx.Nn;
 using NUnit.Framework;
 
 namespace Itexoft.Mlx.Nn.Tests;
@@ -31,9 +29,11 @@ public unsafe class QuantizationTests
         Assert.That(quantized.Mode, Is.EqualTo(QuantizationMode.Affine));
 
         var input = CreateArray(Enumerable.Range(0, 128).Select(i => (float)(i - 64) / 32f).ToArray(), [1, 128]);
+
         try
         {
             var output = quantized.Forward(input);
+
             try
             {
                 TestHelpers.Ok(MlxArray.Eval(output), "eval quantized output");
@@ -59,12 +59,7 @@ public unsafe class QuantizationTests
 
         using var module = new DualLinearModule();
 
-        Quantization.Quantize(
-            module,
-            32,
-            4,
-            QuantizationMode.Affine,
-            (path, _) => string.Equals(path, "second", StringComparison.Ordinal));
+        Quantization.Quantize(module, 32, 4, QuantizationMode.Affine, (path, _) => string.Equals(path, "second", StringComparison.Ordinal));
 
         var flattened = module.FlattenModules();
         Assert.That(flattened["first"], Is.TypeOf<Linear>());
@@ -83,7 +78,7 @@ public unsafe class QuantizationTests
             (path, _) => path switch
             {
                 "first" => (groupSize: 32, bits: 4, mode: QuantizationMode.Affine),
-                _ => null
+                _ => null,
             });
 
         var flattened = module.FlattenModules();
@@ -98,9 +93,7 @@ public unsafe class QuantizationTests
     {
         fixed (float* data = values)
         fixed (int* dims = shape)
-        {
-            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MLX_FLOAT32);
-        }
+            return MlxArray.NewData(data, dims, shape.Length, MlxDType.MlxFloat32);
     }
 
     private sealed class DualLinearModule : Module

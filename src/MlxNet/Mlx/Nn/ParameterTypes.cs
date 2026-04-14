@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -43,8 +44,7 @@ public readonly struct IntTriple(int first, int second, int third)
 
     public static implicit operator IntTriple(int value) => new(value, value, value);
 
-    public static implicit operator IntTriple((int first, int second, int third) value)
-        => new(value.first, value.second, value.third);
+    public static implicit operator IntTriple((int first, int second, int third) value) => new(value.first, value.second, value.third);
 
     public void Deconstruct(out int first, out int second, out int third)
     {
@@ -59,43 +59,58 @@ public readonly struct IntTriple(int first, int second, int third)
 /// </summary>
 public readonly struct FloatOrArray
 {
-    private readonly float _value;
-    private readonly float[]? _values;
+    private readonly float value;
+    private readonly float[]? values;
 
     public FloatOrArray(float value)
     {
-        this._value = value;
-        this._values = null;
+        this.value = value;
+        this.values = null;
     }
 
     public FloatOrArray(float[] values)
     {
-        this._value = 0f;
-        this._values = values ?? throw new ArgumentNullException(nameof(values));
+        this.value = 0f;
+        this.values = values ?? throw new ArgumentNullException(nameof(values));
     }
 
     public FloatOrArray(ReadOnlySpan<float> values)
     {
-        this._value = 0f;
-        this._values = values.ToArray();
+        this.value = 0f;
+        this.values = values.ToArray();
     }
 
-    public int Count => this._values?.Length ?? 1;
+    public int Count => this.values?.Length ?? 1;
+
+    public void CopyTo(Span<float> destination)
+    {
+        if (this.values is null)
+        {
+            destination.Fill(this.value);
+
+            return;
+        }
+
+        if (this.values.Length != destination.Length)
+            throw new ArgumentException("Scale factor count does not match dimensionality.", nameof(destination));
+
+        this.values.AsSpan().CopyTo(destination);
+    }
 
     public float[] AsArray(int dimensions)
     {
-        if (this._values is null)
+        if (this.values is null)
         {
             var result = new float[dimensions];
-            Array.Fill(result, this._value);
+            Array.Fill(result, this.value);
 
             return result;
         }
 
-        if (this._values.Length != dimensions)
+        if (this.values.Length != dimensions)
             throw new ArgumentException("Scale factor count does not match dimensionality.");
 
-        return this._values;
+        return this.values;
     }
 
     public static implicit operator FloatOrArray(float value) => new(value);
@@ -111,5 +126,5 @@ public readonly struct FloatOrArray
 public enum QuantizationMode
 {
     Affine,
-    Mxfp4
+    Mxfp4,
 }

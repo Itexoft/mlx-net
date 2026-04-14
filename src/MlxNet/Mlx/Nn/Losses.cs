@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -13,21 +14,18 @@ public enum LossReduction
 {
     None,
     Mean,
-    Sum
+    Sum,
 }
 
 internal static class LossReductionExtensions
 {
-    public static MlxArrayHandle Reduce(this LossReduction reduction, MlxArrayHandle loss)
+    public static MlxArrayHandle Reduce(this LossReduction reduction, MlxArrayHandle loss) => reduction switch
     {
-        return reduction switch
-        {
-            LossReduction.None => loss,
-            LossReduction.Mean => ReduceMean(loss),
-            LossReduction.Sum => ReduceSum(loss),
-            _ => loss
-        };
-    }
+        LossReduction.None => loss,
+        LossReduction.Mean => ReduceMean(loss),
+        LossReduction.Sum => ReduceSum(loss),
+        _ => loss,
+    };
 
     private static MlxArrayHandle ReduceMean(MlxArrayHandle loss)
     {
@@ -36,7 +34,11 @@ internal static class LossReductionExtensions
         if (rank == 0)
             return loss;
 
-        var axes = AllAxes(rank);
+        Span<int> axes = stackalloc int[rank];
+
+        for (var i = 0; i < rank; i++)
+            axes[i] = i;
+
         var reduced = loss.Mean(axes, false);
         MlxArray.Free(loss);
 
@@ -50,20 +52,15 @@ internal static class LossReductionExtensions
         if (rank == 0)
             return loss;
 
-        var axes = AllAxes(rank);
+        Span<int> axes = stackalloc int[rank];
+
+        for (var i = 0; i < rank; i++)
+            axes[i] = i;
+
         var reduced = loss.Sum(axes, false);
         MlxArray.Free(loss);
 
         return reduced;
-    }
-
-    private static int[] AllAxes(int rank)
-    {
-        var result = new int[rank];
-        for (var i = 0; i < rank; i++)
-            result[i] = i;
-
-        return result;
     }
 }
 
@@ -88,6 +85,7 @@ public static class Losses
         var targetsAsProbabilities = targets.Rank() == logitsRank;
 
         MlxArrayHandle score;
+
         if (targetsAsProbabilities)
         {
             var product = logits.Multiply(targets);
@@ -169,8 +167,7 @@ public static class Losses
             var logInputsClip = logInputs.Clip(min: -100f);
             MlxArray.Free(logInputs);
 
-            var shape = logits.Shape();
-            var ones = TensorFactory.Ones(shape, dtype);
+            var ones = TensorFactory.Ones(logits.ShapeSpan(), dtype);
             var oneMinusLogits = ones.Subtract(logits);
             MlxArray.Free(ones);
 
@@ -209,10 +206,7 @@ public static class Losses
         return reduction.Reduce(loss);
     }
 
-    public static MlxArrayHandle L1Loss(
-        MlxArrayHandle predictions,
-        MlxArrayHandle targets,
-        LossReduction reduction = LossReduction.Mean)
+    public static MlxArrayHandle L1Loss(MlxArrayHandle predictions, MlxArrayHandle targets, LossReduction reduction = LossReduction.Mean)
     {
         var diff = predictions.Subtract(targets);
         var abs = diff.Abs();
@@ -221,10 +215,7 @@ public static class Losses
         return reduction.Reduce(abs);
     }
 
-    public static MlxArrayHandle MseLoss(
-        MlxArrayHandle predictions,
-        MlxArrayHandle targets,
-        LossReduction reduction = LossReduction.Mean)
+    public static MlxArrayHandle MseLoss(MlxArrayHandle predictions, MlxArrayHandle targets, LossReduction reduction = LossReduction.Mean)
     {
         var diff = predictions.Subtract(targets);
         var sq = diff.Square();
@@ -233,11 +224,7 @@ public static class Losses
         return reduction.Reduce(sq);
     }
 
-    public static MlxArrayHandle NllLoss(
-        MlxArrayHandle inputs,
-        MlxArrayHandle targets,
-        int axis = -1,
-        LossReduction reduction = LossReduction.None)
+    public static MlxArrayHandle NllLoss(MlxArrayHandle inputs, MlxArrayHandle targets, int axis = -1, LossReduction reduction = LossReduction.None)
     {
         var axisNorm = TensorExtensions.NormalizeAxis(axis, inputs.Rank());
         var expandedTargets = targets.ExpandedDimension(-1);
@@ -252,11 +239,7 @@ public static class Losses
         return reduction.Reduce(neg);
     }
 
-    public static MlxArrayHandle KlDivLoss(
-        MlxArrayHandle inputs,
-        MlxArrayHandle targets,
-        int axis = -1,
-        LossReduction reduction = LossReduction.None)
+    public static MlxArrayHandle KlDivLoss(MlxArrayHandle inputs, MlxArrayHandle targets, int axis = -1, LossReduction reduction = LossReduction.None)
     {
         var axisNorm = TensorExtensions.NormalizeAxis(axis, inputs.Rank());
         var expTargets = targets.Exp();
@@ -362,10 +345,7 @@ public static class Losses
         return reduction.Reduce(lossRaw);
     }
 
-    public static MlxArrayHandle HingeLoss(
-        MlxArrayHandle inputs,
-        MlxArrayHandle targets,
-        LossReduction reduction = LossReduction.None)
+    public static MlxArrayHandle HingeLoss(MlxArrayHandle inputs, MlxArrayHandle targets, LossReduction reduction = LossReduction.None)
     {
         var product = inputs.Multiply(targets);
         var one = TensorFactory.ScalarLike(product, 1f);
@@ -412,10 +392,7 @@ public static class Losses
         return reduction.Reduce(lossRaw);
     }
 
-    public static MlxArrayHandle LogCoshLoss(
-        MlxArrayHandle inputs,
-        MlxArrayHandle targets,
-        LossReduction reduction = LossReduction.None)
+    public static MlxArrayHandle LogCoshLoss(MlxArrayHandle inputs, MlxArrayHandle targets, LossReduction reduction = LossReduction.None)
     {
         var errors = inputs.Subtract(targets);
         var negativeErrors = errors.Negative();
@@ -465,7 +442,7 @@ public static class Losses
 
     private static MlxArrayHandle L2Norm(MlxArrayHandle array, int axis)
     {
-        if (MlxArray.DType(array) == MlxDType.MLX_COMPLEX64)
+        if (MlxArray.DType(array) == MlxDType.MlxComplex64)
         {
             var abs = array.Abs();
             var squared = abs.Multiply(abs);
