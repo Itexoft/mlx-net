@@ -28,7 +28,7 @@ public sealed class Rope(int dimensions, bool traditional = false, float @base =
             batch *= shape[i];
 
         var reshaped = input.Reshape(batch, seq, feature);
-        var optionalBase = new MlxOptionalFloat { value = @base, has_value = 1 };
+        var optionalBase = new MlxOptionalFloat { value = @base, has_value = true };
 
         var status = MlxFast.Rope(
             out var rope,

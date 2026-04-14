@@ -25,6 +25,14 @@ public static partial class MlxIo
         MlxStreamHandle s
     );
 
+    /// <summary>Loads a GGUF container including tensor and metadata entries.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_load_gguf", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int LoadGguf(
+        out MlxIoGguf gguf,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string file,
+        MlxStreamHandle s
+    );
+
     /// <summary>Loads array(s) from a SafeTensors format using an I/O reader source.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_load_safetensors_reader")]
     public static partial int LoadSafetensorsReader(
@@ -55,6 +63,13 @@ public static partial class MlxIo
     public static partial int Save(
         [MarshalAs(UnmanagedType.LPUTF8Str)] string file,
         MlxArrayHandle a
+    );
+
+    /// <summary>Saves a GGUF container with tensor and metadata entries.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_save_gguf", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int SaveGguf(
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string file,
+        MlxIoGguf gguf
     );
 
     /// <summary>Saves array(s) in safetensors format using a provided writer.</summary>

@@ -268,6 +268,20 @@ public static unsafe partial class MlxFast
         MlxStreamHandle s
     );
 
+    /// <summary>Applies RoPE using a dynamic offset tensor.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_rope_dynamic")]
+    public static partial int RopeDynamic(
+        out MlxArrayHandle res,
+        MlxArrayHandle x,
+        int dims,
+        [MarshalAs(UnmanagedType.I1)] bool traditional,
+        MlxOptionalFloat @base,
+        float scale,
+        MlxArrayHandle offset,
+        MlxArrayHandle freqs,
+        MlxStreamHandle s
+    );
+
     /// <summary>Computes scaled dot-product attention (queries * keys with scaling and softmax, applied to values) efficiently.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_fast_scaled_dot_product_attention", StringMarshalling = StringMarshalling.Utf8)]
     public static partial int ScaledDotProductAttention(
@@ -277,7 +291,8 @@ public static unsafe partial class MlxFast
         MlxArrayHandle values,
         float scale,
         [MarshalAs(UnmanagedType.LPUTF8Str)] string mask_mode,
-        MlxVectorArrayHandle mask_arrs,
+        MlxArrayHandle mask_arr,
+        MlxArrayHandle sinks,
         MlxStreamHandle s
     );
 }

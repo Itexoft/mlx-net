@@ -76,4 +76,13 @@ public static unsafe partial class MlxDistributed
         MlxDistributedGroupHandle group,
         MlxStreamHandle s
     );
+
+    /// <summary>Performs a reduce-scatter summation across the distributed group.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_distributed_sum_scatter")]
+    public static partial int SumScatter(
+        out MlxArrayHandle res,
+        MlxArrayHandle x,
+        MlxDistributedGroupHandle group,
+        MlxStreamHandle s
+    );
 }

@@ -145,6 +145,12 @@ public struct MlxDistributedGroupHandle
 }
 
 [StructLayout(LayoutKind.Sequential)]
+public struct MlxNodeNamer
+{
+    public nint ctx;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 public struct MlxFunctionExporter
 {
     public nint ctx;
@@ -169,6 +175,18 @@ public struct MlxIoWriter
 }
 
 [StructLayout(LayoutKind.Sequential)]
+public struct MlxIoGguf
+{
+    public nint ctx;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct MlxDeviceInfo
+{
+    public nint ctx;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 public struct MlxOptionalInt
 {
     public int value;
@@ -181,7 +199,18 @@ public struct MlxOptionalInt
 public struct MlxOptionalFloat
 {
     public float value;
-    public byte has_value;
+
+    [MarshalAs(UnmanagedType.I1)]
+    public bool has_value;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct MlxOptionalDType
+{
+    public MlxDType value;
+
+    [MarshalAs(UnmanagedType.I1)]
+    public bool has_value;
 }
 
 [StructLayout(LayoutKind.Sequential)]

@@ -640,9 +640,11 @@ public static unsafe partial class MlxOps
         MlxArrayHandle w,
         MlxArrayHandle scales,
         MlxArrayHandle biases,
-        int group_size,
-        int bits,
+        MlxOptionalInt group_size,
+        MlxOptionalInt bits,
         [MarshalAs(UnmanagedType.LPUTF8Str)] string mode,
+        MlxArrayHandle global_scale,
+        MlxOptionalDType dtype,
         MlxStreamHandle s
     );
 
@@ -1429,9 +1431,10 @@ public static unsafe partial class MlxOps
     public static partial int Quantize(
         out MlxVectorArrayHandle res,
         MlxArrayHandle w,
-        int group_size,
-        int bits,
+        MlxOptionalInt group_size,
+        MlxOptionalInt bits,
         [MarshalAs(UnmanagedType.LPUTF8Str)] string mode,
+        MlxArrayHandle global_scale,
         MlxStreamHandle s
     );
 
@@ -1444,9 +1447,171 @@ public static unsafe partial class MlxOps
         MlxArrayHandle scales,
         MlxArrayHandle biases,
         [MarshalAs(UnmanagedType.I1)] bool transpose,
-        int group_size,
-        int bits,
+        MlxOptionalInt group_size,
+        MlxOptionalInt bits,
         [MarshalAs(UnmanagedType.LPUTF8Str)] string mode,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Performs quantized-by-quantized matrix multiplication.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_qqmm", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int Qqmm(
+        out MlxArrayHandle res,
+        MlxArrayHandle x,
+        MlxArrayHandle w,
+        MlxArrayHandle w_scales,
+        MlxOptionalInt group_size,
+        MlxOptionalInt bits,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string mode,
+        MlxArrayHandle global_scale_x,
+        MlxArrayHandle global_scale_w,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Constructs a Bartlett window.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_bartlett")]
+    public static partial int Bartlett(
+        out MlxArrayHandle res,
+        int M,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Constructs a Blackman window.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_blackman")]
+    public static partial int Blackman(
+        out MlxArrayHandle res,
+        int M,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Converts FP8 values to the requested dtype.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_from_fp8")]
+    public static partial int FromFp8(
+        out MlxArrayHandle res,
+        MlxArrayHandle x,
+        MlxDType dtype,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Creates a tensor filled like another tensor using the provided value tensor.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_full_like")]
+    public static partial int FullLike(
+        out MlxArrayHandle res,
+        MlxArrayHandle a,
+        MlxArrayHandle vals,
+        MlxDType dtype,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Gathers slices along a single axis.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_gather_single")]
+    public static partial int GatherSingle(
+        out MlxArrayHandle res,
+        MlxArrayHandle a,
+        MlxArrayHandle indices,
+        int axis,
+        int* slice_sizes,
+        nuint slice_sizes_num,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Constructs a Hamming window.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_hamming")]
+    public static partial int Hamming(
+        out MlxArrayHandle res,
+        int M,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Constructs a Hann window.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_hanning")]
+    public static partial int Hanning(
+        out MlxArrayHandle res,
+        int M,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Scatters source values into an array wherever mask is true.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_masked_scatter")]
+    public static partial int MaskedScatter(
+        out MlxArrayHandle res,
+        MlxArrayHandle a,
+        MlxArrayHandle mask,
+        MlxArrayHandle src,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Computes the median across the specified axes.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_median")]
+    public static partial int Median(
+        out MlxArrayHandle res,
+        MlxArrayHandle a,
+        int* axes,
+        nuint axes_num,
+        [MarshalAs(UnmanagedType.I1)] bool keepdims,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Writes updates into an array along a single axis.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_scatter_single")]
+    public static partial int ScatterSingle(
+        out MlxArrayHandle res,
+        MlxArrayHandle a,
+        MlxArrayHandle indices,
+        MlxArrayHandle updates,
+        int axis,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Adds updates into an array along a single axis.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_scatter_add_single")]
+    public static partial int ScatterAddSingle(
+        out MlxArrayHandle res,
+        MlxArrayHandle a,
+        MlxArrayHandle indices,
+        MlxArrayHandle updates,
+        int axis,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Applies max scatter along a single axis.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_scatter_max_single")]
+    public static partial int ScatterMaxSingle(
+        out MlxArrayHandle res,
+        MlxArrayHandle a,
+        MlxArrayHandle indices,
+        MlxArrayHandle updates,
+        int axis,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Applies min scatter along a single axis.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_scatter_min_single")]
+    public static partial int ScatterMinSingle(
+        out MlxArrayHandle res,
+        MlxArrayHandle a,
+        MlxArrayHandle indices,
+        MlxArrayHandle updates,
+        int axis,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Applies product scatter along a single axis.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_scatter_prod_single")]
+    public static partial int ScatterProdSingle(
+        out MlxArrayHandle res,
+        MlxArrayHandle a,
+        MlxArrayHandle indices,
+        MlxArrayHandle updates,
+        int axis,
+        MlxStreamHandle s
+    );
+
+    /// <summary>Converts the tensor to FP8 representation.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_to_fp8")]
+    public static partial int ToFp8(
+        out MlxArrayHandle res,
+        MlxArrayHandle x,
         MlxStreamHandle s
     );
 

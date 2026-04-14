@@ -76,4 +76,109 @@ public static unsafe partial class MlxIoTypes
     public static partial int IoWriterFree(
         MlxIoWriter io
     );
+
+    /// <summary>Creates an empty GGUF container.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_new")]
+    public static partial MlxIoGguf IoGgufNew();
+
+    /// <summary>Releases a GGUF container.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_free")]
+    public static partial int IoGgufFree(
+        MlxIoGguf io
+    );
+
+    /// <summary>Returns all GGUF tensor and metadata keys.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_get_keys")]
+    public static partial int IoGgufGetKeys(
+        out MlxVectorStringHandle keys,
+        MlxIoGguf io
+    );
+
+    /// <summary>Returns a GGUF tensor entry by key.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_get_array", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int IoGgufGetArray(
+        out MlxArrayHandle arr,
+        MlxIoGguf io,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key
+    );
+
+    /// <summary>Returns a GGUF metadata tensor entry by key.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_get_metadata_array", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int IoGgufGetMetadataArray(
+        out MlxArrayHandle arr,
+        MlxIoGguf io,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key
+    );
+
+    /// <summary>Returns a GGUF metadata string pointer by key.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_get_metadata_string", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int IoGgufGetMetadataString(
+        out MlxStringHandle str,
+        MlxIoGguf io,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key
+    );
+
+    /// <summary>Returns a GGUF metadata string vector by key.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_get_metadata_vector_string", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int IoGgufGetMetadataVectorString(
+        out MlxVectorStringHandle values,
+        MlxIoGguf io,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key
+    );
+
+    /// <summary>Indicates whether GGUF metadata contains a tensor entry with the specified key.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_has_metadata_array", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int IoGgufHasMetadataArray(
+        [MarshalAs(UnmanagedType.I1)] out bool flag,
+        MlxIoGguf io,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key
+    );
+
+    /// <summary>Indicates whether GGUF metadata contains a string entry with the specified key.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_has_metadata_string", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int IoGgufHasMetadataString(
+        [MarshalAs(UnmanagedType.I1)] out bool flag,
+        MlxIoGguf io,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key
+    );
+
+    /// <summary>Indicates whether GGUF metadata contains a string-vector entry with the specified key.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_has_metadata_vector_string", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int IoGgufHasMetadataVectorString(
+        [MarshalAs(UnmanagedType.I1)] out bool flag,
+        MlxIoGguf io,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key
+    );
+
+    /// <summary>Sets a GGUF tensor entry.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_set_array", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int IoGgufSetArray(
+        MlxIoGguf io,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key,
+        MlxArrayHandle arr
+    );
+
+    /// <summary>Sets a GGUF metadata tensor entry.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_set_metadata_array", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int IoGgufSetMetadataArray(
+        MlxIoGguf io,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key,
+        MlxArrayHandle arr
+    );
+
+    /// <summary>Sets a GGUF metadata string entry.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_set_metadata_string", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int IoGgufSetMetadataString(
+        MlxIoGguf io,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string value
+    );
+
+    /// <summary>Sets a GGUF metadata string-vector entry.</summary>
+    [LibraryImport(Common.Lib, EntryPoint = "mlx_io_gguf_set_metadata_vector_string", StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int IoGgufSetMetadataVectorString(
+        MlxIoGguf io,
+        [MarshalAs(UnmanagedType.LPUTF8Str)] string key,
+        MlxVectorStringHandle values
+    );
 }

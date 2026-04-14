@@ -62,9 +62,11 @@ public sealed class QuantizedEmbedding : Embedding, IQuantized
             weightRows,
             scaleRows,
             biasRows,
-            this.GroupSize,
-            this.Bits,
+            CreateOptionalInt(this.GroupSize),
+            CreateOptionalInt(this.Bits),
             this.Mode.ToNativeString(),
+            default,
+            default,
             TensorUtilities.DefaultStream());
         TensorUtilities.CheckStatus(status, "dequantize");
 
@@ -98,8 +100,8 @@ public sealed class QuantizedEmbedding : Embedding, IQuantized
             this._scalesBuffer.Value,
             biasesHandle,
             true,
-            this.GroupSize,
-            this.Bits,
+            CreateOptionalInt(this.GroupSize),
+            CreateOptionalInt(this.Bits),
             this.Mode.ToNativeString(),
             TensorUtilities.DefaultStream());
         TensorUtilities.CheckStatus(status, "quantized_matmul");
@@ -118,9 +120,10 @@ public sealed class QuantizedEmbedding : Embedding, IQuantized
         var status = MlxOps.Quantize(
             out var packed,
             weight,
-            groupSize,
-            bits,
+            CreateOptionalInt(groupSize),
+            CreateOptionalInt(bits),
             mode.ToNativeString(),
+            default,
             TensorUtilities.DefaultStream());
         TensorUtilities.CheckStatus(status, "quantize");
         MlxArray.Free(weight);
@@ -170,4 +173,7 @@ public sealed class QuantizedEmbedding : Embedding, IQuantized
 
         return TensorFactory.Normal(0f, scale, [embeddingCount, dimensions]);
     }
+
+    private static MlxOptionalInt CreateOptionalInt(int value)
+        => new() { value = value, has_value = true };
 }
