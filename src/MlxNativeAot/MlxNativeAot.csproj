@@ -6,7 +6,7 @@
     <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk"/>
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <OutputType>Library</OutputType>
         <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
         <PublishAot>true</PublishAot>
@@ -24,7 +24,7 @@
         <RepositoryType>git</RepositoryType>
         <PackageProjectUrl>https://github.com/Itexoft/mlx-net</PackageProjectUrl>
         <PackageTags>MLX;NativeAOT;macOS;arm64;AppleSilicon;bindings;interop;</PackageTags>
-        <LangVersion>13</LangVersion>
+        <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <StripSymbols>false</StripSymbols>
         <NoBuild>true</NoBuild>
@@ -54,6 +54,14 @@
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <MlxNativeAotBuildToken Condition="'$(MlxNativeAotBuildToken)'==''">$([System.Guid]::NewGuid().ToString('N'))</MlxNativeAotBuildToken>
+        <MlxNativeAotIsolationRoot>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/obj/$(Configuration)/$(TargetFramework)/$(RuntimeIdentifier)/mlx-nativeaot/$(MlxNativeAotBuildToken)'))</MlxNativeAotIsolationRoot>
+        <MlxNativeAotPublishDirectory>$(MlxNativeAotIsolationRoot)/publish</MlxNativeAotPublishDirectory>
+        <MlxNativeAotBuildCacheDirectory>$(MlxNativeAotIsolationRoot)/cache</MlxNativeAotBuildCacheDirectory>
+        <MlxNativeAotBaseOutputPath>$(MlxNativeAotIsolationRoot)/bin/</MlxNativeAotBaseOutputPath>
+    </PropertyGroup>
+
     <ItemGroup>
         <DirectPInvoke Include="__Internal"/>
         <None Remove="build-cache\**"/>
@@ -76,13 +84,28 @@
     </ItemGroup>
 
     <Target Name="RunBuildSh" Condition="'$(SkipRunBuildSh)'!='true'">
+        <PropertyGroup>
+            <_MlxNativeAotResolvedOutputPath>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/$(OutputPath)'))</_MlxNativeAotResolvedOutputPath>
+        </PropertyGroup>
+
         <Exec
                 Command="$(MSBuildProjectDirectory)/build.sh"
                 WorkingDirectory="$(MSBuildProjectDirectory)"
                 UseCommandProcessor="false"
-                EnvironmentVariables="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(TargetFramework);RuntimeIdentifier=$(RuntimeIdentifier)"/>
-        <Move SourceFiles="$(NativeBinary)" DestinationFolder="$(OutputPath)" OverwriteReadOnlyFiles="true"/>
-        <RemoveDir Directories="$(NativeOutputPath)" Condition="Exists('$(NativeOutputPath)')"/>
+                EnvironmentVariables="Configuration=$(Configuration);Platform=$(Platform);TargetFramework=$(TargetFramework);RuntimeIdentifier=$(RuntimeIdentifier);PUBLISH_DIR=$(MlxNativeAotPublishDirectory);BUILD_CACHE_DIR=$(MlxNativeAotBuildCacheDirectory);DOTNET_BUILD_BASE_OUTPUT_PATH=$(MlxNativeAotBaseOutputPath)"/>
+
+        <ItemGroup>
+            <_MlxNativeAotPublishedFiles Include="$(MlxNativeAotPublishDirectory)/**/*"/>
+        </ItemGroup>
+
+        <Error Condition="'@(_MlxNativeAotPublishedFiles)' == ''" Text="No files found in $(MlxNativeAotPublishDirectory)."/>
+
+        <MakeDir Directories="$(_MlxNativeAotResolvedOutputPath)"/>
+        <Copy SourceFiles="@(_MlxNativeAotPublishedFiles)"
+              DestinationFiles="@(_MlxNativeAotPublishedFiles->'$(_MlxNativeAotResolvedOutputPath)/%(RecursiveDir)%(Filename)%(Extension)')"
+              SkipUnchangedFiles="true"
+              OverwriteReadOnlyFiles="true"/>
+        <RemoveDir Directories="$(MlxNativeAotIsolationRoot)" Condition="Exists('$(MlxNativeAotIsolationRoot)')"/>
     </Target>
     <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk"/>
 

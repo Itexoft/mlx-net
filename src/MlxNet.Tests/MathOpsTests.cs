@@ -1,9 +1,10 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
-using NUnit.Framework;
 using Itexoft.Mlx;
+using NUnit.Framework;
 
 [TestFixture]
 public unsafe class MathOpsTests
@@ -13,6 +14,7 @@ public unsafe class MathOpsTests
     {
         TestHelpers.RequireNativeOrIgnore();
         var data = new[] { -1f, -2f, 3f };
+
         TestHelpers.WithStream(stream =>
         {
             TestHelpers.WithShape(
@@ -21,7 +23,7 @@ public unsafe class MathOpsTests
                 {
                     fixed (float* pd = data)
                     {
-                        var a = MlxArray.NewData(pd, shape, (int)rank, MlxDType.MLX_FLOAT32);
+                        var a = MlxArray.NewData(pd, shape, (int)rank, MlxDType.MlxFloat32);
                         TestHelpers.Ok(MlxOps.Abs(out var b, a, stream), "abs");
                         TestHelpers.EvalArray(b);
                         var v = TestHelpers.ToFloat32(b);
@@ -40,6 +42,7 @@ public unsafe class MathOpsTests
     {
         TestHelpers.RequireNativeOrIgnore();
         var data = new[] { 1f, -2f, 3f };
+
         TestHelpers.WithStream(stream =>
         {
             TestHelpers.WithShape(
@@ -48,7 +51,7 @@ public unsafe class MathOpsTests
                 {
                     fixed (float* pd = data)
                     {
-                        var a = MlxArray.NewData(pd, shape, (int)rank, MlxDType.MLX_FLOAT32);
+                        var a = MlxArray.NewData(pd, shape, (int)rank, MlxDType.MlxFloat32);
                         TestHelpers.Ok(MlxOps.Negative(out var n, a, stream), "negative");
                         TestHelpers.EvalArray(n);
                         var v = TestHelpers.ToFloat32(n);
@@ -66,6 +69,7 @@ public unsafe class MathOpsTests
     public void Multiply_Two_Arrays()
     {
         TestHelpers.RequireNativeOrIgnore();
+
         TestHelpers.WithStream(stream =>
         {
             TestHelpers.WithShape(
@@ -74,8 +78,8 @@ public unsafe class MathOpsTests
                 {
                     var two = MlxArray.NewFloat32(2f);
                     var three = MlxArray.NewFloat32(3f);
-                    TestHelpers.Ok(MlxOps.Full(out var a, shape, rank, two, MlxDType.MLX_FLOAT32, stream), "full a");
-                    TestHelpers.Ok(MlxOps.Full(out var b, shape, rank, three, MlxDType.MLX_FLOAT32, stream), "full b");
+                    TestHelpers.Ok(MlxOps.Full(out var a, shape, rank, two, MlxDType.MlxFloat32, stream), "full a");
+                    TestHelpers.Ok(MlxOps.Full(out var b, shape, rank, three, MlxDType.MlxFloat32, stream), "full b");
                     TestHelpers.Ok(MlxOps.Multiply(out var c, a, b, stream), "multiply");
                     TestHelpers.EvalArray(c);
                     var v = TestHelpers.ToFloat32(c);

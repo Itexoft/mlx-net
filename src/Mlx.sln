@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MlxNativeAot", "MlxNativeAo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MlxNet.Tests", "MlxNet.Tests\MlxNet.Tests.csproj", "{A7740B8E-1D17-4A80-BFB7-ED318D4850C7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MlxNet.TensorRewriter", "MlxNet.TensorRewriter\MlxNet.TensorRewriter.csproj", "{620A7D65-1235-4809-8AFD-E8DFE9D4C81A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{A7740B8E-1D17-4A80-BFB7-ED318D4850C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A7740B8E-1D17-4A80-BFB7-ED318D4850C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A7740B8E-1D17-4A80-BFB7-ED318D4850C7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{620A7D65-1235-4809-8AFD-E8DFE9D4C81A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{620A7D65-1235-4809-8AFD-E8DFE9D4C81A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{620A7D65-1235-4809-8AFD-E8DFE9D4C81A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{620A7D65-1235-4809-8AFD-E8DFE9D4C81A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
