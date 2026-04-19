@@ -53,7 +53,14 @@ while [ $# -gt 0 ]; do
 done
 
 if [ ! -f "$MLX_C_DIR/CMakeLists.txt" ]; then echo "CMakeLists.txt not found in $MLX_C_DIR" >&2; exit 1; fi
-VER="$(sed -nE 's/.*GIT_TAG[[:space:]]+v([0-9]+(\.[0-9]+)*).*/\1/p' "$MLX_C_DIR/CMakeLists.txt" | head -n 1)"
+VER="$(
+  sed -nE \
+    -e 's/.*GIT_TAG[[:space:]]+v([0-9]+(\.[0-9]+)*).*/\1/p' \
+    -e 's|.*URL[[:space:]]+".*/tags/v([0-9]+(\.[0-9]+)*)\.tar\.gz".*|\1|p' \
+    -e 's/.*MLX_SOURCE_VERSION[[:space:]]+([0-9]+(\.[0-9]+)*).*/\1/p' \
+    "$MLX_C_DIR/CMakeLists.txt" \
+  | head -n 1
+)"
 if [ -z "$VER" ]; then echo "failed to extract MLX version from CMakeLists.txt" >&2; exit 1; fi
 
 if [ ! -f "$MACOSX_VER_FILE" ]; then echo "MACOSX.VERSION not found" >&2; exit 1; fi

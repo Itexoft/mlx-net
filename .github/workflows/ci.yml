@@ -1,9 +1,9 @@
 name: CI
 on:
   push:
-    branches: [master]
+    branches: [ master ]
   pull_request:
-    branches: [master]
+    branches: [ master ]
   workflow_dispatch:
   workflow_call:
     outputs:
@@ -62,7 +62,7 @@ jobs:
       - name: Build MLX-C
         if: steps.mlx_bin_restore.outputs.cache-hit != 'true'
         run: ./build-mlx-c.sh --allow-version-mismatch
-      
+
       - name: Save mlx-bin cache
         if: steps.mlx_bin_restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4

@@ -1,3 +1,4 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
@@ -7,9 +8,9 @@ using System.Runtime.InteropServices;
 namespace Itexoft.Mlx;
 
 [StructLayout(LayoutKind.Sequential)]
-public struct MlxArrayHandle
+public readonly struct MlxArrayHandle
 {
-    public nint ctx;
+    public readonly nint ctx;
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -145,6 +146,12 @@ public struct MlxDistributedGroupHandle
 }
 
 [StructLayout(LayoutKind.Sequential)]
+public struct MlxNodeNamer
+{
+    public nint ctx;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 public struct MlxFunctionExporter
 {
     public nint ctx;
@@ -169,19 +176,39 @@ public struct MlxIoWriter
 }
 
 [StructLayout(LayoutKind.Sequential)]
+public struct MlxIoGguf
+{
+    public nint ctx;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct MlxDeviceInfo
+{
+    public nint ctx;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 public struct MlxOptionalInt
 {
     public int value;
 
-    [MarshalAs(UnmanagedType.I1)]
-    public bool has_value;
+    [MarshalAs(UnmanagedType.I1)] public bool has_value;
 }
 
 [StructLayout(LayoutKind.Sequential)]
 public struct MlxOptionalFloat
 {
     public float value;
-    public byte has_value;
+
+    [MarshalAs(UnmanagedType.I1)] public bool has_value;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct MlxOptionalDType
+{
+    public MlxDType value;
+
+    [MarshalAs(UnmanagedType.I1)] public bool has_value;
 }
 
 [StructLayout(LayoutKind.Sequential)]

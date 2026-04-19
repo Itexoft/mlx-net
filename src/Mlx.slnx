@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="MlxNativeAot/MlxNativeAot.csproj" />
+  <Project Path="MlxNet.TensorRewriter/MlxNet.TensorRewriter.csproj" />
+  <Project Path="MlxNet.Tests/MlxNet.Tests.csproj" />
+  <Project Path="MlxNet/MlxNet.csproj" />
+</Solution>

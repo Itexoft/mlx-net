@@ -1,0 +1,9 @@
+<Project>
+    <PropertyGroup>
+        <MlxTensorRewriteTaskAssembly>$(MSBuildThisFileDirectory)src/MlxNet.TensorRewriter/bin/$(Configuration)/net10.0/MlxNet.TensorRewriter.dll</MlxTensorRewriteTaskAssembly>
+        <MlxTensorRewriteTaskProject>$(MSBuildThisFileDirectory)src/MlxNet.TensorRewriter/MlxNet.TensorRewriter.csproj</MlxTensorRewriteTaskProject>
+    </PropertyGroup>
+
+    <Import Project="$(MSBuildThisFileDirectory)src/MlxNet.TensorRewriter/build/Itexoft.Mlx.targets"
+            Condition="'$(MSBuildProjectName)'!='MlxNet.TensorRewriter' and Exists('$(MSBuildThisFileDirectory)src/MlxNet.TensorRewriter/build/Itexoft.Mlx.targets')"/>
+</Project>

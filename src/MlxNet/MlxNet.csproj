@@ -4,14 +4,15 @@
 
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <OutputType>Library</OutputType>
         <AssemblyName>Itexoft.MLX</AssemblyName>
         <RootNamespace>Itexoft.Mlx</RootNamespace>
+        <MlxNetTensorRewriterProject>..\MlxNet.TensorRewriter\MlxNet.TensorRewriter.csproj</MlxNetTensorRewriterProject>
         <RuntimeIdentifier>osx-arm64</RuntimeIdentifier>
         <SelfContained>true</SelfContained>
         <GenerateDependencyFile>false</GenerateDependencyFile>
-        <LangVersion>13</LangVersion>
+        <LangVersion>latest</LangVersion>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PackageId>Itexoft.MLX</PackageId>
         <Version>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/../../VERSION').Trim())</Version>
@@ -25,6 +26,11 @@
         <InvariantGlobalization>true</InvariantGlobalization>
         <PackageLicenseExpression>MPL-2.0-no-copyleft-exception</PackageLicenseExpression>
         <Nullable>enable</Nullable>
+        <MlxTensorRewriteEnabled>false</MlxTensorRewriteEnabled>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);_PackMlxNetTensorRewrite</TargetsForTfmSpecificContentInPackage>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)'=='Release'">
@@ -71,6 +77,11 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\MlxNet.TensorRewriter\MlxNet.TensorRewriter.csproj">
+            <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+            <BuildReference>false</BuildReference>
+            <PrivateAssets>all</PrivateAssets>
+        </ProjectReference>
         <ProjectReference Include="..\MlxNativeAot\MlxNativeAot.csproj" PrivateAssets="all"/>
     </ItemGroup>
 
@@ -83,4 +94,32 @@
     <ItemGroup>
         <None Include="$(OutputPath)MLX.NativeAOT.dylib" Pack="true" PackagePath="runtimes/$(RuntimeIdentifier)/native/"/>
     </ItemGroup>
+
+    <Target Name="_BuildMlxNetTensorRewrite">
+        <MSBuild Projects="$(MlxNetTensorRewriterProject)" Targets="Build" BuildInParallel="$(BuildInParallel)" Properties="Configuration=$(Configuration)"/>
+    </Target>
+
+    <Target Name="_GetMlxNetTensorRewriteFiles" DependsOnTargets="_BuildMlxNetTensorRewrite">
+        <MSBuild Projects="$(MlxNetTensorRewriterProject)" Targets="GetTargetPath" BuildInParallel="$(BuildInParallel)" Properties="Configuration=$(Configuration)">
+            <Output TaskParameter="TargetOutputs" ItemName="_MlxNetTensorRewriteAssembly"/>
+        </MSBuild>
+
+        <ItemGroup>
+            <_MlxNetTensorRewriteFiles Include="$([System.IO.Path]::GetDirectoryName('%(_MlxNetTensorRewriteAssembly.Identity)'))/*.dll"/>
+            <_MlxNetTensorRewriteFiles Include="$([System.IO.Path]::GetDirectoryName('%(_MlxNetTensorRewriteAssembly.Identity)'))/*.deps.json"/>
+            <_MlxNetTensorRewriteTargets Include="../MlxNet.TensorRewriter/build/Itexoft.Mlx.targets"/>
+        </ItemGroup>
+    </Target>
+
+    <Target Name="_PackMlxNetTensorRewrite" DependsOnTargets="_GetMlxNetTensorRewriteFiles">
+        <ItemGroup>
+            <TfmSpecificPackageFile Include="@(_MlxNetTensorRewriteFiles)">
+                <PackagePath>buildTransitive/tasks/net10.0</PackagePath>
+            </TfmSpecificPackageFile>
+
+            <TfmSpecificPackageFile Include="@(_MlxNetTensorRewriteTargets)">
+                <PackagePath>buildTransitive</PackagePath>
+            </TfmSpecificPackageFile>
+        </ItemGroup>
+    </Target>
 </Project>
