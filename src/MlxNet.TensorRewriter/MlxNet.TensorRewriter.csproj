@@ -1,0 +1,30 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. -->
+<!-- If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. -->
+<!-- This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0. -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <RootNamespace>Itexoft.Mlx.TensorRewriter</RootNamespace>
+        <IsPackable>false</IsPackable>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <PackageLicenseExpression>MPL-2.0-no-copyleft-exception</PackageLicenseExpression>
+        <PackageId>MlxNet.TensorRewriter</PackageId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Reference Include="Microsoft.CodeAnalysis">
+            <HintPath>$(RoslynTargetsPath)/bincore/Microsoft.CodeAnalysis.dll</HintPath>
+        </Reference>
+        <Reference Include="Microsoft.CodeAnalysis.CSharp">
+            <HintPath>$(RoslynTargetsPath)/bincore/Microsoft.CodeAnalysis.CSharp.dll</HintPath>
+        </Reference>
+        <Reference Include="Microsoft.Build.Framework">
+            <HintPath>$(MSBuildBinPath)/Microsoft.Build.Framework.dll</HintPath>
+        </Reference>
+        <Reference Include="Microsoft.Build.Utilities.Core">
+            <HintPath>$(MSBuildBinPath)/Microsoft.Build.Utilities.Core.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+</Project>

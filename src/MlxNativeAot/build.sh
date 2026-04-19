@@ -11,7 +11,7 @@ MACOSX_MIN_VER=$(tr -d '[:space:]' < "$SCRIPT_DIR/../../MACOSX.VERSION")
 
 BIN_DIR="$SCRIPT_DIR/../../mlx-bin"
 BUILD_DIR="$SCRIPT_DIR/../../build"
-BUILD_CACHE_DIR="$SCRIPT_DIR/build-cache"
+BUILD_CACHE_DIR="${BUILD_CACHE_DIR:-$SCRIPT_DIR/build-cache}"
 
 if [ "$(uname -s)" != "Darwin" ]; then
   echo "macOS required for clang shim linking" >&2
@@ -23,6 +23,7 @@ mkdir -p "$BUILD_CACHE_DIR"
 CONFIGURATION="${Configuration:-Release}"
 RUNTIME_IDENTIFIER="${RuntimeIdentifier:-osx-arm64}"
 PUBLISH_DIR="${PUBLISH_DIR:-$BUILD_DIR}"
+DOTNET_BUILD_BASE_OUTPUT_PATH="${DOTNET_BUILD_BASE_OUTPUT_PATH:-}"
 
 echo "PUBLISH_DIR=$PUBLISH_DIR"
 
@@ -122,13 +123,23 @@ export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 
 run_dotnet() { dotnet "$@"; }
 
-run_dotnet --diagnostics publish "$SCRIPT_DIR" \
-  -c "$CONFIGURATION" \
-  -r "$RUNTIME_IDENTIFIER" \
-  -o "$PUBLISH_DIR" \
-  -p:SkipRunBuildSh=true \
-  --no-build \
-  -bl:"$BUILD_CACHE_DIR/msbuild.binlog" || true
+dotnet_publish_args=(
+  --diagnostics
+  publish
+  "$SCRIPT_DIR"
+  -c "$CONFIGURATION"
+  -r "$RUNTIME_IDENTIFIER"
+  -o "$PUBLISH_DIR"
+  -p:SkipRunBuildSh=true
+  --no-build
+  -bl:"$BUILD_CACHE_DIR/msbuild.binlog"
+)
+
+if [ -n "$DOTNET_BUILD_BASE_OUTPUT_PATH" ]; then
+  dotnet_publish_args+=("-p:BaseOutputPath=$DOTNET_BUILD_BASE_OUTPUT_PATH")
+fi
+
+run_dotnet "${dotnet_publish_args[@]}" || true
 
 if [ -f "$BUILD_CACHE_DIR/msbuild.binlog" ] && command -v dotnet >/dev/null 2>&1; then
   dotnet msbuild "$BUILD_CACHE_DIR/msbuild.binlog" -noconlog "-flp:v=diag;logfile=$BUILD_CACHE_DIR/msbuild.binlog.txt" || true

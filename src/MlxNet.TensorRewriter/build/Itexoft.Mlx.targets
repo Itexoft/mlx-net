@@ -1,0 +1,53 @@
+<Project>
+    <PropertyGroup>
+        <MlxTensorRewriteTaskAssembly Condition="'$(MlxTensorRewriteTaskAssembly)'==''">$(MSBuildThisFileDirectory)tasks/net10.0/MlxNet.TensorRewriter.dll</MlxTensorRewriteTaskAssembly>
+        <MlxTensorRewriteTaskProject Condition="'$(MlxTensorRewriteTaskProject)'==''"></MlxTensorRewriteTaskProject>
+        <MlxTensorRewriteEnabled Condition="'$(MlxTensorRewriteEnabled)'==''">true</MlxTensorRewriteEnabled>
+        <MlxTensorRewriteOutputDirectory Condition="'$(MlxTensorRewriteOutputDirectory)'==''">$(MSBuildProjectDirectory)/obj/$(Configuration)/$(TargetFramework)/mlx-tensor-rewrite</MlxTensorRewriteOutputDirectory>
+        <MlxTensorRewriteTaskBuildLockDirectory Condition="'$(MlxTensorRewriteTaskBuildLockDirectory)'=='' and '$(MlxTensorRewriteTaskProject)'!=''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\obj\$(Configuration)\tensor-rewriter-build.lock'))</MlxTensorRewriteTaskBuildLockDirectory>
+    </PropertyGroup>
+
+    <UsingTask TaskName="TensorRewriteTask"
+               AssemblyFile="$(MlxTensorRewriteTaskAssembly)"
+               Condition="'$(MlxTensorRewriteEnabled)'=='true'"/>
+
+    <Target Name="EnsureMlxTensorRewriteTaskAssembly"
+            Condition="'$(MlxTensorRewriteEnabled)'=='true' and !Exists('$(MlxTensorRewriteTaskAssembly)') and Exists('$(MlxTensorRewriteTaskProject)')">
+        <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(MlxTensorRewriteTaskBuildLockDirectory)'))"/>
+
+        <Exec Command="/bin/zsh -c &quot;set -euo pipefail
+cleanup() { rmdir '$(MlxTensorRewriteTaskBuildLockDirectory)' 2&gt;/dev/null || true; }
+while ! mkdir '$(MlxTensorRewriteTaskBuildLockDirectory)' 2&gt;/dev/null; do sleep 0.1; done
+trap cleanup EXIT
+if [ ! -f '$(MlxTensorRewriteTaskAssembly)' ]; then
+  dotnet build '$(MlxTensorRewriteTaskProject)' -c $(Configuration) --nologo
+fi
+&quot;"/>
+    </Target>
+
+    <Target Name="MlxTensorRewrite"
+            BeforeTargets="CoreCompile"
+            DependsOnTargets="ResolveReferences;EnsureMlxTensorRewriteTaskAssembly"
+            Condition="'$(MlxTensorRewriteEnabled)'=='true' and '$(DesignTimeBuild)'!='true' and Exists('$(MlxTensorRewriteTaskAssembly)')">
+        <ItemGroup>
+            <_MlxTensorRewriteSources Include="@(Compile)"
+                                      Exclude="$(BaseIntermediateOutputPath)**;$(IntermediateOutputPath)**;$(OutputPath)**;$(MlxTensorRewriteOutputDirectory)/**"/>
+        </ItemGroup>
+
+        <TensorRewriteTask Sources="@(_MlxTensorRewriteSources)"
+                           References="@(ReferencePath)"
+                           OutputDirectory="$(MlxTensorRewriteOutputDirectory)"
+                           ProjectDirectory="$(MSBuildProjectDirectory)"
+                           ProjectPath="$(MSBuildProjectFullPath)"
+                           DefineConstants="$(DefineConstants)"
+                           LangVersion="$(LangVersion)">
+            <Output TaskParameter="RewrittenFiles" ItemName="_MlxTensorRewrittenFiles"/>
+            <Output TaskParameter="RewrittenOriginalFiles" ItemName="_MlxTensorRewrittenOriginalFiles"/>
+        </TensorRewriteTask>
+
+        <ItemGroup Condition="'@(_MlxTensorRewrittenFiles)'!=''">
+            <Compile Remove="@(_MlxTensorRewrittenOriginalFiles)"/>
+            <Compile Include="@(_MlxTensorRewrittenFiles)"/>
+        </ItemGroup>
+    </Target>
+</Project>
