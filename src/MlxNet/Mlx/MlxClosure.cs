@@ -1,8 +1,8 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
-using System;
 using System.Runtime.InteropServices;
 
 namespace Itexoft.Mlx;
@@ -69,8 +69,8 @@ public static unsafe partial class MlxClosure
     public static partial int KwargsApply(
         out MlxVectorArrayHandle res,
         MlxClosureKwargsHandle cls,
-        MlxVectorArrayHandle input_0,
-        MlxMapStringToArrayHandle input_1);
+        MlxVectorArrayHandle input0,
+        MlxMapStringToArrayHandle input1);
 
     /// <summary>Creates a new closure that will compute both a function’s result and its gradient.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_closure_value_and_grad_new")]
@@ -99,8 +99,8 @@ public static unsafe partial class MlxClosure
     /// <summary>Applies a special closure that computes both value and gradient, returning the function’s output and its gradient.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_closure_value_and_grad_apply")]
     public static partial int ValueAndGradApply(
-        out MlxVectorArrayHandle res_0,
-        out MlxVectorArrayHandle res_1,
+        out MlxVectorArrayHandle res0,
+        out MlxVectorArrayHandle res1,
         MlxClosureValueAndGradHandle cls,
         MlxVectorArrayHandle input);
 
@@ -133,9 +133,9 @@ public static unsafe partial class MlxClosure
     public static partial int CustomApply(
         out MlxVectorArrayHandle res,
         MlxClosureCustomHandle cls,
-        MlxVectorArrayHandle input_0,
-        MlxVectorArrayHandle input_1,
-        MlxVectorArrayHandle input_2);
+        MlxVectorArrayHandle input0,
+        MlxVectorArrayHandle input1,
+        MlxVectorArrayHandle input2);
 
     /// <summary>Creates a new closure for a function with a custom JVP (forward-mode differentiation) definition.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_closure_custom_jvp_new")]
@@ -166,10 +166,10 @@ public static unsafe partial class MlxClosure
     public static partial int CustomJvpApply(
         out MlxVectorArrayHandle res,
         MlxClosureCustomJvp cls,
-        MlxVectorArrayHandle input_0,
-        MlxVectorArrayHandle input_1,
-        int* input_2,
-        nuint input_2_num);
+        MlxVectorArrayHandle input0,
+        MlxVectorArrayHandle input1,
+        int* input2,
+        nuint input2Num);
 
     /// <summary>Creates a new closure for a function with a custom vmap (vectorization) definition.</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_closure_custom_vmap_new")]
@@ -198,10 +198,10 @@ public static unsafe partial class MlxClosure
     /// <summary>Applies a closure with a custom vectorization (vmap) rule to batched inputs (computes the vectorized result).</summary>
     [LibraryImport(Common.Lib, EntryPoint = "mlx_closure_custom_vmap_apply")]
     public static partial int CustomVmapApply(
-        out MlxVectorArrayHandle res_0,
-        out MlxVectorIntHandle res_1,
+        out MlxVectorArrayHandle res0,
+        out MlxVectorIntHandle res1,
         MlxClosureCustomVmap cls,
-        MlxVectorArrayHandle input_0,
-        int* input_1,
-        nuint input_1_num);
+        MlxVectorArrayHandle input0,
+        int* input1,
+        nuint input1Num);
 }

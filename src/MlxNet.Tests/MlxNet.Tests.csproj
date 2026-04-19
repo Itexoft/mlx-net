@@ -4,7 +4,7 @@
 
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <IsPackable>false</IsPackable>
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -12,6 +12,9 @@
         <SignAssembly>true</SignAssembly>
         <AssemblyOriginatorKeyFile>mlx-net-tests.snk</AssemblyOriginatorKeyFile>
         <PublicSign>true</PublicSign>
+        <LangVersion>latest</LangVersion>
+        <MlxNetTestsBuildLockDirectory Condition="'$(MlxNetTestsBuildLockDirectory)'==''">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/obj/$(Configuration)/mlx-net-tests-build.lock'))</MlxNetTestsBuildLockDirectory>
+        <MlxNetTestsBuildLockJanitorFile Condition="'$(MlxNetTestsBuildLockJanitorFile)'==''">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/obj/$(Configuration)/mlx-net-tests-build.lock.pid'))</MlxNetTestsBuildLockJanitorFile>
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1"/>
@@ -21,4 +24,28 @@
     <ItemGroup Condition="Exists('..\MlxNet\MlxNet.csproj')">
         <ProjectReference Include="..\MlxNet\MlxNet.csproj"/>
     </ItemGroup>
+
+    <Target Name="AcquireMlxNetTestsBuildLock"
+            BeforeTargets="CoreBuild"
+            Condition="'$(DesignTimeBuild)'!='true'">
+        <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(MlxNetTestsBuildLockDirectory)'))"/>
+
+        <Exec Command="/bin/zsh -c &quot;set -euo pipefail
+while ! mkdir '$(MlxNetTestsBuildLockDirectory)' 2&gt;/dev/null; do sleep 0.1; done
+/bin/zsh -c 'while kill -0 &quot;$1&quot; 2&gt;/dev/null; do sleep 1; done; rm -f &quot;$2&quot;; rmdir &quot;$3&quot; 2&gt;/dev/null || true' _ &quot;$PPID&quot; '$(MlxNetTestsBuildLockJanitorFile)' '$(MlxNetTestsBuildLockDirectory)' &amp;
+echo $! &gt; '$(MlxNetTestsBuildLockJanitorFile)'
+&quot;"/>
+    </Target>
+
+    <Target Name="ReleaseMlxNetTestsBuildLock"
+            AfterTargets="CoreBuild"
+            Condition="'$(DesignTimeBuild)'!='true'">
+        <Exec Command="/bin/zsh -c &quot;set -euo pipefail
+if [ -f '$(MlxNetTestsBuildLockJanitorFile)' ]; then
+  xargs kill &lt; '$(MlxNetTestsBuildLockJanitorFile)' 2&gt;/dev/null || true
+  rm -f '$(MlxNetTestsBuildLockJanitorFile)'
+fi
+rmdir '$(MlxNetTestsBuildLockDirectory)' 2&gt;/dev/null || true
+&quot;"/>
+    </Target>
 </Project>

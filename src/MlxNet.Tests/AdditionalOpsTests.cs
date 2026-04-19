@@ -1,9 +1,10 @@
+// Copyright (c) 2011-2026 Denis Kudelin
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // This Source Code Form is "Incompatible With Secondary Licenses", as defined by the Mozilla Public License, v. 2.0.
 
-using NUnit.Framework;
 using Itexoft.Mlx;
+using NUnit.Framework;
 
 [TestFixture]
 public unsafe class AdditionalOpsTests
@@ -13,9 +14,10 @@ public unsafe class AdditionalOpsTests
     {
         TestHelpers.RequireNativeOrIgnore();
         var stream = TestHelpers.NewCpuStream();
+
         try
         {
-            var rc = MlxOps.Arange(out var array, 0, 5, 1, MlxDType.MLX_FLOAT32, stream);
+            var rc = MlxOps.Arange(out var array, 0, 5, 1, MlxDType.MlxFloat32, stream);
             TestHelpers.Ok(rc, "arange");
             TestHelpers.EvalArray(array, "eval arange");
 
@@ -37,12 +39,14 @@ public unsafe class AdditionalOpsTests
     {
         TestHelpers.RequireNativeOrIgnore();
         var stream = TestHelpers.NewCpuStream();
+
         try
         {
-            TestHelpers.Ok(MlxOps.Arange(out var array, 0, 6, 1, MlxDType.MLX_FLOAT32, stream), "arange");
+            TestHelpers.Ok(MlxOps.Arange(out var array, 0, 6, 1, MlxDType.MlxFloat32, stream), "arange");
             var dims = new[] { 3, 2 };
 
             var shape = TestHelpers.AllocShape(dims);
+
             try
             {
                 TestHelpers.Ok(MlxOps.Reshape(out var reshaped, array, shape, (nuint)dims.Length, stream), "reshape");
@@ -71,15 +75,17 @@ public unsafe class AdditionalOpsTests
     {
         TestHelpers.RequireNativeOrIgnore();
         var stream = TestHelpers.NewCpuStream();
+
         try
         {
             var zero = MlxArray.NewFloat32(0f);
             var dims = new[] { 2, 2 };
 
             var shape = TestHelpers.AllocShape(dims);
+
             try
             {
-                TestHelpers.Ok(MlxOps.Full(out var array, shape, (nuint)dims.Length, zero, MlxDType.MLX_FLOAT32, stream), "full");
+                TestHelpers.Ok(MlxOps.Full(out var array, shape, (nuint)dims.Length, zero, MlxDType.MlxFloat32, stream), "full");
                 TestHelpers.Ok(MlxOps.Exp(out var exponentiated, array, stream), "exp");
                 TestHelpers.EvalArray(exponentiated, "eval exp");
 
@@ -106,6 +112,7 @@ public unsafe class AdditionalOpsTests
     {
         TestHelpers.RequireNativeOrIgnore();
         var stream = TestHelpers.NewCpuStream();
+
         try
         {
             var data = new[] { 1f, 3f, 2f };
@@ -114,9 +121,10 @@ public unsafe class AdditionalOpsTests
             fixed (float* source = data)
             {
                 var shape = TestHelpers.AllocShape(dims);
+
                 try
                 {
-                    var input = MlxArray.NewData(source, shape, dims.Length, MlxDType.MLX_FLOAT32);
+                    var input = MlxArray.NewData(source, shape, dims.Length, MlxDType.MlxFloat32);
                     TestHelpers.Ok(MlxOps.Argmax(out var indices, input, false, stream), "argmax");
                     TestHelpers.EvalArray(indices, "eval argmax");
 
